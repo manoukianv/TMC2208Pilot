@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
 
 #define TMC_1 true
 #define TMC_2 true
@@ -22,8 +23,9 @@ const float defaults_hold_amps[] = {0.5, 0.5, 0.5, 0.5, 0.5};
 const float defaults_r_sense[] = {0.11, 0.11, 0.11, 0.11, 0.11};
 
 // Set the value for your Wifi network
-const char *SSID_NAME = "Carlton_2.4";
-const char *SSID_PASWORD = "bienvenue chez carlton.";
+IPAddress    apIP(192, 168, 10, 1);         // Defining a static IP address: AP mode is 192.168.4.1
+const char *ssid      = "TMC2208Pilot-AP";  // Acces Point Name
+const char *password  = "TMC2208PWD";         // Acces Point password (min 8 char, if wrong, start is Failed)
 
 /****************************************************************************
                     Do not update under this line :-)

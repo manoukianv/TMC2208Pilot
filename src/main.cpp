@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <TMC2208Stepper.h>
 #include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include "conf.h"
 
@@ -28,6 +29,21 @@ TMC2208Stepper driver[5] = {
 // Set web server port number to 80
 ESP8266WebServer server(80);
 
+String getTemperature (int driverNumber) {
+  if (driverNumber == 0) {
+    return "<font color='black'> <80 &deg;C</font>";
+  }
+  if (driverNumber == 1) {
+    return "<font color='purple'> =80 &deg;C</font>";
+  }
+  if (driverNumber == 2) {
+    return "<font color='orange'> =120 &deg;C</font>";
+  }
+  if (driverNumber == 3) {
+    return "<font color='red'> =140 &deg;C</font>";
+  }
+}
+
 /**
     | driver | microsteps default | spreadCycle default | spreadCycle actual | hold current | R Sense |
 
@@ -36,11 +52,15 @@ ESP8266WebServer server(80);
 String getPage() {
   String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
   page += "<title>TMC2208 Pilot Manager</title>";
-  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }</style>";
-  page += "</head><body><h1>TMC2208 Monitoring</h1>";
-  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }</style>";
+  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
+  page += "table { width: 100%; border-collapse : collapse; }";
+  //page += "table, th, td { border : 1px solid black; }";
+  page += "th { background-color: #000088; color : white; }";
+  page += "th, td { padding: 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd; }";
+  page += "</style></head>";
+  page += "<body><h1>TMC2208 Monitoring</h1>";
   page += "<h3>Parameters</h3>";
-  page += "<table border=1>";
+  page += "<table>";
   page += "<tr><th>driver</th><th>microsteps</th><th>current</th><th>hold current</th><th>R Sense</th><th>spreadCycle</th></tr>";
   for (size_t i = 0; i < 5; i++) {
       page += "<tr><td>";
@@ -59,17 +79,31 @@ String getPage() {
   }
   page += "</table>";
   page += "<h3>Monitoring</h3>";
-  page += "<table border=1>";
-  page += "<tr><th>driver</th> <th>spreadCycle</th></tr>";
+  page += "<table>";
+  page += "<tr><th>driver</th><th>current default</th><th>current actual</th><th>temperature threshold</th><th>over temp</th><th>short to GND</th><th>open load</th></tr>";
   for (size_t i = 0; i < 5; i++) {
       page += "<tr><td>";
       page += i + 1;
       page += "</td><td>";
-      page += tmc_sw[i]?"true":"false";
+      page += defaults_amps[i];
+      page += " mA</td><td> actual : ";
+      page += act_current[i];
+      page += " mA<BR> min : ";
+
+      page += min_current[i];
+      page += " mA<BR> max : ";
+      page += max_current[i];
+      page += " mA</td><td>";
+      page += getTemperature(i);
+      page += "</td><td>";
+      page += "false";
+      page += "</td><td>";
+      page += "false";
+      page += "</td><td>";
+      page += "false";
       page += "</td></tr>";
   }
   page += "</table>";
-  page += "<br><br><p><a hrf='https://www.google.com'>www.tmcpilot.fr</p>";
   page += "</body></html>";
   return page;
 }
@@ -101,8 +135,34 @@ void handleRoot(){
 }
 
 void setup() {
+  Serial.begin(115200);
+  Serial.println();
 
-  for (size_t i = 0; i < 4; i++) {
+  // Connect to Wi-Fi network with SSID and password
+  Serial.println("Setup the WIFI Access Point (AP)");
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));   // subnet FF FF FF 00
+
+  /* You can remove the password parameter if you want the AP to be open. */
+  Serial.print("... AP Status : ");
+  bool startAP = WiFi.softAP(ssid, password);
+  Serial.println(startAP?"Ready":"Failed!");
+
+  Serial.printf("...AP Name : %s\n", ssid);
+  Serial.printf("...AP password : %s\n", password);
+
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("...AP IPaddress: ");
+  Serial.println(myIP);
+
+  // On branche la fonction qui gère la premiere page / link to the function that manage launch page
+  server.on ( "/", handleRoot );
+
+  server.begin();
+  Serial.println ( "HTTP server started" );
+
+  Serial.println ( "Start init driver" );
+  for (size_t i = 0; i < 5; i++) {
 
     // Initiate the SoftwareSerial
     tmc_sw[i].begin(57600);                             // Init used serial port
@@ -117,29 +177,9 @@ void setup() {
     driver[i].microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     driver[i].en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     driver[i].toff(0x2);																// Enable driver
+    Serial.printf("...driver %d init\n", i);
   }
-
-  // Connect to Wi-Fi network with SSID and password
-  Serial.begin(115200);
-  Serial.print("Connecting to ");
-  Serial.println(SSID_NAME);
-  WiFi.begin(SSID_NAME, SSID_PASWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  // Print local IP address and start web server
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // On branche la fonction qui gère la premiere page / link to the function that manage launch page
-  server.on ( "/", handleRoot );
-
-  server.begin();
-  Serial.println ( "HTTP server started" );
+  Serial.println ( "End of setup, ready to connect." );
 
 }
 
