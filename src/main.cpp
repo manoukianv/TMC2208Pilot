@@ -4,6 +4,10 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include "conf.h"
+#include <TMC2208Stepper_REGDEFS.h>
+
+// based on the TMC2208Stepper_MACRO.h, return a flag from a read status
+#define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
 
 uint16_t min_current[5] = {0,0,0,0,0};
 uint16_t max_current[5] = {0,0,0,0,0};
@@ -29,18 +33,33 @@ TMC2208Stepper driver[5] = {
 // Set web server port number to 80
 ESP8266WebServer server(80);
 
-String getTemperature (int driverNumber) {
-  if (driverNumber == 0) {
-    return "<font color='black'> <80 &deg;C</font>";
+String getTemperatureThreshold (int driverNumber) {
+  if (GETSTATUS(flag_drv[driverNumber],T157)==1) {
+    return "<font color='red'> T157 &deg;C</font>";
   }
-  if (driverNumber == 1) {
-    return "<font color='purple'> =80 &deg;C</font>";
+  else if (GETSTATUS(flag_drv[driverNumber],T150)==1) {
+    return "<font color='orange'> =T150 &deg;C</font>";
   }
-  if (driverNumber == 2) {
-    return "<font color='orange'> =120 &deg;C</font>";
+  else if (GETSTATUS(flag_drv[driverNumber],T143)==1) {
+    return "<font color='purple'> T143 &deg;C</font>";
   }
-  if (driverNumber == 3) {
-    return "<font color='red'> =140 &deg;C</font>";
+  else if (GETSTATUS(flag_drv[driverNumber],T120)==1) {
+    return "<font color='blue'> T120 &deg;C</font>";
+  }
+  else {
+    return "<font color='green'>OK</font>";
+  }
+}
+
+String getTemperatureOver (int driverNumber) {
+  if (GETSTATUS(flag_drv[driverNumber],OT)) {
+    return "<font color='red'>ERROR</font>";
+  }
+  else if (GETSTATUS(flag_drv[driverNumber],OTPW)) {
+    return "<font color='orange'>WARN</font>";
+  }
+  else {
+    return "<font color='green'>OK</font>";
   }
 }
 
@@ -80,27 +99,26 @@ String getPage() {
   page += "</table>";
   page += "<h3>Monitoring</h3>";
   page += "<table>";
-  page += "<tr><th>driver</th><th>current default</th><th>current actual</th><th>temperature threshold</th><th>over temp</th><th>short to GND</th><th>open load</th></tr>";
+  page += "<tr><th>driver</th><th>spreadCycle actual</th><th>current actual</th><th>temperature threshold</th><th>over temp</th><th>short to GND</th><th>open load</th></tr>";
   for (size_t i = 0; i < 5; i++) {
       page += "<tr><td>";
       page += i + 1;
       page += "</td><td>";
-      page += defaults_amps[i];
-      page += " mA</td><td> actual : ";
+      page += GETSTATUS(flag_drv[i],STEALTH)==0?"true":"false";
+      page += "</td><td> actual : ";
       page += act_current[i];
       page += " mA<BR> min : ";
-
       page += min_current[i];
       page += " mA<BR> max : ";
       page += max_current[i];
       page += " mA</td><td>";
-      page += getTemperature(i);
+      page += getTemperatureThreshold(i);
       page += "</td><td>";
-      page += "false";
+      page += getTemperatureOver(i);
       page += "</td><td>";
-      page += "false";
+      page += (GETSTATUS(flag_drv[i],S2GA) + GETSTATUS(flag_drv[i],S2GB) + GETSTATUS(flag_drv[i],S2VSA) + GETSTATUS(flag_drv[i],S2VSB))>0?"true":"false";
       page += "</td><td>";
-      page += "false";
+      page += (GETSTATUS(flag_drv[i],OLA) + GETSTATUS(flag_drv[i],OLB))>0?"true":"false";
       page += "</td></tr>";
   }
   page += "</table>";
