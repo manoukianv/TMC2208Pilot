@@ -15,11 +15,11 @@ uint16_t act_current[5] = {0,0,0,0,0};
 uint32_t flag_drv[5]    = {0,0,0,0,0};
 
 SoftwareSerial tmc_sw[5] = {
-  SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN, false, 256),
-  SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 256),
-  SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 256),
-  SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 256),
-  SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 256)
+  SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN, false, 64),
+  SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64),
+  SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64),
+  SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64),
+  SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64)
 };
 
 TMC2208Stepper driver[5] = {
@@ -130,7 +130,7 @@ void handleSubmit() {
   // Actualise le GPIO / Update GPIO
   String LEDValue;
   LEDValue = server.arg("stepper");
-  Serial.println("Set GPIO "); Serial.print(LEDValue);
+  //Serial.println("Set GPIO "); //Serial.print(LEDValue);
   if ( LEDValue == "1" ) {
     //digitalWrite(LEDPIN, 1);
     //etatLed = "On";
@@ -140,7 +140,7 @@ void handleSubmit() {
     //etatLed = "Off";
     server.send ( 200, "text/html", getPage() );
   } else {
-    Serial.println("Err Led Value");
+    //Serial.println("Err Led Value");
   }
 }
 
@@ -153,37 +153,14 @@ void handleRoot(){
 }
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println();
+  //Serial.begin(115200);
+  //Serial.println();
 
-  // Connect to Wi-Fi network with SSID and password
-  Serial.println("Setup the WIFI Access Point (AP)");
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));   // subnet FF FF FF 00
-
-  /* You can remove the password parameter if you want the AP to be open. */
-  Serial.print("... AP Status : ");
-  bool startAP = WiFi.softAP(ssid, password);
-  Serial.println(startAP?"Ready":"Failed!");
-
-  Serial.printf("...AP Name : %s\n", ssid);
-  Serial.printf("...AP password : %s\n", password);
-
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("...AP IPaddress: ");
-  Serial.println(myIP);
-
-  // On branche la fonction qui gère la premiere page / link to the function that manage launch page
-  server.on ( "/", handleRoot );
-
-  server.begin();
-  Serial.println ( "HTTP server started" );
-
-  Serial.println ( "Start init driver" );
+  //Serial.println ( "Start init driver" );
   for (size_t i = 0; i < 5; i++) {
 
     // Initiate the SoftwareSerial
-    tmc_sw[i].begin(57600);                             // Init used serial port
+    tmc_sw[i].begin(9600);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
 
     // Setup de driver
@@ -195,9 +172,34 @@ void setup() {
     driver[i].microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     driver[i].en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     driver[i].toff(0x2);																// Enable driver
-    Serial.printf("...driver %d init\n", i);
+    //Serial.printf("...driver %d init\n", i);
   }
-  Serial.println ( "End of setup, ready to connect." );
+
+  // Connect to Wi-Fi network with SSID and password
+  //Serial.println("Setup the WIFI Access Point (AP)");
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));   // subnet FF FF FF 00
+
+  /* You can remove the password parameter if you want the AP to be open. */
+  //Serial.print("... AP Status : ");
+  bool startAP = WiFi.softAP(ssid, password);
+  //Serial.println(startAP?"Ready":"Failed!");
+
+  //Serial.printf("...AP Name : %s\n", ssid);
+  //Serial.printf("...AP password : %s\n", password);
+
+  IPAddress myIP = WiFi.softAPIP();
+  //Serial.print("...AP IPaddress: ");
+  //Serial.println(myIP);
+
+  // On branche la fonction qui gère la premiere page / link to the function that manage launch page
+  server.on ( "/", handleRoot );
+
+  server.begin();
+  //Serial.println ( "HTTP server started" );
+
+  //Serial.println ( "End of setup, ready to connect." );
+  //Serial.end();
 
 }
 
@@ -215,6 +217,8 @@ void loop() {
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
       max_current[i]=(amp_tot > min_current[i])?amp_tot:max_current[i];
       act_current[i]=amp_tot;
+
+      delay(200);
   }
 
 }

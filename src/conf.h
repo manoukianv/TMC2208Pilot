@@ -30,17 +30,17 @@ const char *password  = "TMC2208PWD";         // Acces Point password (min 8 cha
 /****************************************************************************
                     Do not update under this line :-)
 ****************************************************************************/
-#define TMC_1_RX_PIN 0
+#define TMC_1_RX_PIN 3
 #define TMC_1_TX_PIN 1
 
-#define TMC_2_RX_PIN 2
-#define TMC_2_TX_PIN 3
+#define TMC_2_RX_PIN 13
+#define TMC_2_TX_PIN 15
 
-#define TMC_3_RX_PIN 4
-#define TMC_3_TX_PIN 5
+#define TMC_3_RX_PIN 14
+#define TMC_3_TX_PIN 12
 
-#define TMC_4_RX_PIN 12
-#define TMC_4_TX_PIN 13
+#define TMC_4_RX_PIN 0
+#define TMC_4_TX_PIN 2
 
-#define TMC_5_RX_PIN 14
-#define TMC_5_TX_PIN 15
+#define TMC_5_RX_PIN 5
+#define TMC_5_TX_PIN 4
