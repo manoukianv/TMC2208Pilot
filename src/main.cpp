@@ -14,21 +14,9 @@ uint16_t max_current[5] = {0,0,0,0,0};
 uint16_t act_current[5] = {0,0,0,0,0};
 uint32_t flag_drv[5]    = {0,0,0,0,0};
 
-SoftwareSerial tmc_sw[5] = {
-  SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN, false, 64),
-  SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64),
-  SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64),
-  SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64),
-  SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64)
-};
+SoftwareSerial *tmc_sw[5];
 
-TMC2208Stepper driver[5] = {
-  TMC2208Stepper(&tmc_sw[0]),
-  TMC2208Stepper(&tmc_sw[1]),
-  TMC2208Stepper(&tmc_sw[2]),
-  TMC2208Stepper(&tmc_sw[3]),
-  TMC2208Stepper(&tmc_sw[4])
-};
+TMC2208Stepper *driver[5];
 
 // Set web server port number to 80
 ESP8266WebServer server(80);
@@ -156,25 +144,6 @@ void setup() {
   //Serial.begin(115200);
   //Serial.println();
 
-  //Serial.println ( "Start init driver" );
-  for (size_t i = 0; i < 5; i++) {
-
-    // Initiate the SoftwareSerial
-    tmc_sw[i].begin(9600);                             // Init used serial port
-    while(!tmc_sw[i]);                                  // Wait for port to be ready
-
-    // Setup de driver
-    driver[i].pdn_disable(1);													  // Use PDN/UART pin for communication
-    driver[i].I_scale_analog(0);												// Adjust current from the registers
-    driver[i].rms_current(defaults_amps[i],
-                          defaults_hold_amps[i],
-                          defaults_r_sense[i]);					// Set driver current, multiplier for hold current and RSENSE
-    driver[i].microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
-    driver[i].en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    driver[i].toff(0x2);																// Enable driver
-    //Serial.printf("...driver %d init\n", i);
-  }
-
   // Connect to Wi-Fi network with SSID and password
   //Serial.println("Setup the WIFI Access Point (AP)");
   WiFi.mode(WIFI_AP_STA);
@@ -201,6 +170,32 @@ void setup() {
   //Serial.println ( "End of setup, ready to connect." );
   //Serial.end();
 
+  tmc_sw[0] = new SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN, false, 64);
+  tmc_sw[1] = new SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64);
+  tmc_sw[2] = new SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64);
+  tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
+  tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
+
+  //Serial.println ( "Start init driver" );
+  for (size_t i = 0; i < 5; i++) {
+
+    // Initiate the SoftwareSerial
+    //tmc_sw[i].begin(9600);                             // Init used serial port
+    while(!tmc_sw[i]);                                  // Wait for port to be ready
+
+    driver[i] = new TMC2208Stepper(tmc_sw[i]);
+    // Setup de driver
+    driver[i]->pdn_disable(1);													  // Use PDN/UART pin for communication
+    driver[i]->I_scale_analog(0);												// Adjust current from the registers
+    driver[i]->rms_current(defaults_amps[i],
+                          defaults_hold_amps[i],
+                          defaults_r_sense[i]);					// Set driver current, multiplier for hold current and RSENSE
+    driver[i]->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
+    driver[i]->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+    driver[i]->toff(0x2);																// Enable driver
+    //Serial.printf("...driver %d init\n", i);
+  }
+
 }
 
 void loop() {
@@ -208,10 +203,10 @@ void loop() {
 
   for (size_t i = 0; i < 5; i++) {
       // read the actual amps for the driver
-      uint16_t amp_a = driver[i].cur_a();
-      uint16_t amp_b = driver[i].cur_b();
+      uint16_t amp_a = driver[i]->cur_a();
+      uint16_t amp_b = driver[i]->cur_b();
 
-      driver[i].DRV_STATUS(&flag_drv[i]);
+      driver[i]->DRV_STATUS(&flag_drv[i]);
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
