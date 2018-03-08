@@ -205,12 +205,12 @@ void loop() {
 
   for (int i = 0; i < 5; i++) {
       // read the actual amps for the driver
-      TMC2208Stepper tmc = *(driver[i]);
+      TMC2208Stepper *tmc = driver[i];
 
-      uint16_t amp_a = tmc.cur_a();
-      uint16_t amp_b = tmc.cur_b();
+      uint16_t amp_a = tmc->cur_a();
+      uint16_t amp_b = tmc->cur_b();
 
-      tmc.DRV_STATUS(&(flag_drv[i]));
+      tmc->DRV_STATUS(&(flag_drv[i]));
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
