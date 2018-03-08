@@ -177,23 +177,25 @@ void setup() {
   tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
 
   //Serial.println ( "Start init driver" );
-  for (size_t i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++) {
 
     // Initiate the SoftwareSerial
     //tmc_sw[i].begin(9600);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
+    TMC2208Stepper tmc = TMC2208Stepper(tmc_sw[i]);
 
-    driver[i] = new TMC2208Stepper(tmc_sw[i]);
     // Setup de driver
-    driver[i]->pdn_disable(1);													  // Use PDN/UART pin for communication
-    driver[i]->I_scale_analog(0);												// Adjust current from the registers
-    driver[i]->rms_current(defaults_amps[i],
+    tmc.pdn_disable(1);													  // Use PDN/UART pin for communication
+    tmc.I_scale_analog(0);												// Adjust current from the registers
+    tmc.rms_current(defaults_amps[i],
                           defaults_hold_amps[i],
                           defaults_r_sense[i]);					// Set driver current, multiplier for hold current and RSENSE
-    driver[i]->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
-    driver[i]->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    driver[i]->toff(0x2);																// Enable driver
+    tmc.microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
+    tmc.en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+    tmc.toff(0x2);																// Enable driver
     //Serial.printf("...driver %d init\n", i);
+
+    driver[i] = &tmc ;
   }
 
 }
@@ -201,12 +203,14 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  for (size_t i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++) {
       // read the actual amps for the driver
-      uint16_t amp_a = driver[i]->cur_a();
-      uint16_t amp_b = driver[i]->cur_b();
+      TMC2208Stepper tmc = *(driver[i]);
 
-      driver[i]->DRV_STATUS(&flag_drv[i]);
+      uint16_t amp_a = tmc.cur_a();
+      uint16_t amp_b = tmc.cur_b();
+
+      tmc.DRV_STATUS(&(flag_drv[i]));
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
