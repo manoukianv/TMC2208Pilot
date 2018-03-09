@@ -212,8 +212,7 @@ void loop() {
       tmc->MSCURACT(&(value_drv[i]));
 
       uint16_t amp_a = GETSTATUS(value_drv[i],CUR_A);
-      uint16_t amp_b = GETSTATUS(value_drv[i],CUR_B);      
-
+      uint16_t amp_b = GETSTATUS(value_drv[i],CUR_B);
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
