@@ -13,6 +13,7 @@ uint16_t min_current[5] = {0,0,0,0,0};
 uint16_t max_current[5] = {0,0,0,0,0};
 uint16_t act_current[5] = {0,0,0,0,0};
 uint32_t flag_drv[5]    = {0,0,0,0,0};
+uint32_t value_drv[5]    = {0,0,0,0,0};
 
 SoftwareSerial *tmc_sw[5];
 
@@ -180,7 +181,7 @@ void setup() {
   for (int i = 0; i < 5; i++) {
 
     // Initiate the SoftwareSerial
-    //tmc_sw[i].begin(9600);                             // Init used serial port
+    tmc_sw[i]->begin(38400);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
     TMC2208Stepper tmc = TMC2208Stepper(tmc_sw[i]);
 
@@ -207,10 +208,12 @@ void loop() {
       // read the actual amps for the driver
       TMC2208Stepper *tmc = driver[i];
 
-      uint16_t amp_a = tmc->cur_a();
-      uint16_t amp_b = tmc->cur_b();
-
       tmc->DRV_STATUS(&(flag_drv[i]));
+      tmc->MSCURACT(&(value_drv[i]));
+
+      uint16_t amp_a = GETSTATUS(value_drv[i],CUR_A);
+      uint16_t amp_b = GETSTATUS(value_drv[i],CUR_B);      
+
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
       min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
