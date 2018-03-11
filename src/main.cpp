@@ -200,6 +200,8 @@ void setup() {
 
   server.begin();
 
+  delay(100); // wait to reduce uart reuse pin error
+
   tmc_sw[1] = new SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64);
   tmc_sw[2] = new SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64);
   tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
@@ -221,6 +223,9 @@ void setup() {
 
     driver[i] = tmc ;
   }
+
+  // at startup wait driver are online to setup them
+  delay(startup_wait_before_init_driver);
 
   // setup the driver
   applySettings();
