@@ -141,11 +141,14 @@ void handleRoot(){
 
 void setup() {
 
-  WiFi.begin(ssid, password);
+  // Connect to Wi-Fi network with SSID and password
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));   // subnet FF FF FF 00
 
-  while ( WiFi.status() != WL_CONNECTED ) {
-    delay ( 500 );
-  }
+  /* You can remove the password parameter if you want the AP to be open. */
+  bool startAP = WiFi.softAP(ssid, password);
+
+  IPAddress myIP = WiFi.softAPIP();
 
   // link to the function that manage launch page
   server.on ( "/", handleRoot );
@@ -179,7 +182,7 @@ void setup() {
                       defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
     tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    //tmc->mstep_reg_select(true);
+    tmc->mstep_reg_select(true);
     tmc->toff(0x2);																// Enable driver
 
     driver[i] = tmc ;
