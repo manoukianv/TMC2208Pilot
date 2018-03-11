@@ -4,11 +4,9 @@
 // Setup the start Parameters
 const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
 
-#define TMC_1 true
-#define TMC_2 true
-#define TMC_3 true
-#define TMC_4 true
-#define TMC_5 true
+// Define which drivers you used, see pinout to disable unused drivers
+// 5 drivers max are available
+const bool use_tmc[] = {true, true, true, true, false};
 
 // Set the default current amps, max amp is 1700mA (1.7A)
 const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
@@ -25,13 +23,17 @@ const float defaults_hold_amps[] = {0.5, 0.5, 0.5, 0.5, 0.5};
 // Set the default resistance (0.11 by default)
 const float defaults_r_sense[] = {0.11, 0.11, 0.11, 0.11, 0.11};
 
+// Set the default TOFF (0, driver disabled, more than 2 for StealChop, beetween 2-15 for spreadCycle)
+// https://hackaday.com/2016/09/30/3d-printering-trinamic-tmc2130-stepper-motor-drivers-shifting-the-gears/
+const float defaults_toff[] = {8, 8, 8, 8, 8};
+
 // Set the value for your Wifi network
 IPAddress    apIP(192, 168, 10, 1);         // Defining a static IP address: AP mode is 192.168.4.1
 const char *ssid      = "TMC2208Pilot-AP";  // Acces Point Name
 const char *password  = "TMC2208PWD";         // Acces Point password (min 8 char, if wrong, start is Failed)
 
 // set the Web page Parameters
-const char *timeToRefresh = "5";         // refresh web page every 10s
+const char *timeToRefresh = "1";         // refresh web page every 10s
 
 /****************************************************************************
                     Do not update under this line :-)

@@ -9,11 +9,12 @@
 // based on the TMC2208Stepper_MACRO.h, return a flag from a read status
 #define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
 
-uint16_t min_current[5] = {9999,9999,9999,9999,9999};
-uint16_t max_current[5] = {0,0,0,0,0};
-uint16_t act_current[5] = {0,0,0,0,0};
-uint32_t flag_drv[5]    = {0,0,0,0,0};
-uint32_t value_drv[5]    = {0,0,0,0,0};
+uint16_t min_current[5]     = {9999,9999,9999,9999,9999};
+uint16_t max_current[5]     = {0,0,0,0,0};
+uint16_t act_current[5]     = {0,0,0,0,0};
+uint32_t reg_drv_status[5]  = {0,0,0,0,0};
+uint32_t reg_ms_cur_act[5]  = {0,0,0,0,0};
+uint32_t reg_chop_conf[5]   = {0,0,0,0,0};
 
 SoftwareSerial *tmc_sw[5];
 
@@ -25,11 +26,14 @@ ESP8266WebServer server(80);
 
 void applySettings() {
   for (int i = 0; i <= 4; i++) {
+    //if driver disables, go to next
+    if (!use_tmc[i]) continue;
 
     // Initiate the SoftwareSerial
     TMC2208Stepper *tmc = driver[i];
 
     // Setup de driver
+    tmc->toff(0x0);																// Disable driver
     tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
     tmc->I_scale_analog(0);												  // Adjust current from the registers
     tmc->rms_current( defaults_amps[i],
@@ -38,22 +42,36 @@ void applySettings() {
     tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     tmc->mstep_reg_select(true);
-    tmc->toff(0x2);																// Enable driver
-
+    tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
   }
 }
 
+uint16_t getMicrostep (uint8_t mres){
+	switch(mres) {
+		case 0: return 256;
+		case 1: return 128;
+		case 2: return  64;
+		case 3: return  32;
+		case 4: return  16;
+		case 5: return   8;
+		case 6: return   4;
+		case 7: return   2;
+		case 8: return   0;
+	}
+	return 0;
+}
+
 String getTemperatureThreshold (int driverNumber) {
-  if (GETSTATUS(flag_drv[driverNumber],T157)==1) {
+  if (GETSTATUS(reg_drv_status[driverNumber],T157)==1) {
     return "<font color='red'> T157 &deg;C</font>";
   }
-  else if (GETSTATUS(flag_drv[driverNumber],T150)==1) {
+  else if (GETSTATUS(reg_drv_status[driverNumber],T150)==1) {
     return "<font color='orange'> =T150 &deg;C</font>";
   }
-  else if (GETSTATUS(flag_drv[driverNumber],T143)==1) {
+  else if (GETSTATUS(reg_drv_status[driverNumber],T143)==1) {
     return "<font color='purple'> T143 &deg;C</font>";
   }
-  else if (GETSTATUS(flag_drv[driverNumber],T120)==1) {
+  else if (GETSTATUS(reg_drv_status[driverNumber],T120)==1) {
     return "<font color='blue'> T120 &deg;C</font>";
   }
   else {
@@ -62,10 +80,10 @@ String getTemperatureThreshold (int driverNumber) {
 }
 
 String getTemperatureOver (int driverNumber) {
-  if (GETSTATUS(flag_drv[driverNumber],OT)) {
+  if (GETSTATUS(reg_drv_status[driverNumber],OT)) {
     return "<font color='red'>ERROR</font>";
   }
-  else if (GETSTATUS(flag_drv[driverNumber],OTPW)) {
+  else if (GETSTATUS(reg_drv_status[driverNumber],OTPW)) {
     return "<font color='orange'>WARN</font>";
   }
   else {
@@ -115,6 +133,9 @@ String getPage() {
   page += "<table>";
   page += "<tr><th>driver</th><th>microsteps</th><th>current</th><th>hold current</th><th>R Sense</th><th>spreadCycle</th></tr>";
   for (size_t i = 0; i < 5; i++) {
+      //if driver disables, go to next
+      if (!use_tmc[i]) continue;
+
       page += "<tr><td>";
       page += i + 1;
       page += "</td><td>";
@@ -130,28 +151,33 @@ String getPage() {
       page += "</td></tr>";
   }
   page += "</table>";
-  page += "<h3>Monitoring</h3>";
+  page += "<h3>Monitoring actual values</h3>";
   page += "<table>";
-  page += "<tr><th>driver</th><th>spreadCycle actual</th><th>current actual</th><th>temperature threshold</th><th>over temp</th><th>short to GND</th><th>open load</th></tr>";
+  page += "<tr><th>driver</th><th>spreadCycle</th><th>microsteps</th><th>current</th><th>temperature<br>threshold</th><th>over<br>temperature</th><th>short to GND</th><th>open load</th></tr>";
   for (size_t i = 0; i < 5; i++) {
+      //if driver disables, go to next
+      if (!use_tmc[i]) continue;
+
       page += "<tr><td>";
       page += i + 1;
       page += "</td><td>";
-      page += GETSTATUS(flag_drv[i],STEALTH)==0?"true":"false";
-      page += "</td><td> actual : ";
+      page += GETSTATUS(reg_drv_status[i],STEALTH)==0?"true":"false";
+      page += "</td><td>";
+      page += getMicrostep(GETSTATUS(reg_chop_conf[i],MRES));
+      page += "</td><td>";
       page += act_current[i];
-      page += " mA<BR> min : ";
+      page += " mA<BR>";
       page += min_current[i];
-      page += " mA<BR> max : ";
+      page += " mA / ";
       page += max_current[i];
       page += " mA</td><td>";
       page += getTemperatureThreshold(i);
       page += "</td><td>";
       page += getTemperatureOver(i);
       page += "</td><td>";
-      page += (GETSTATUS(flag_drv[i],S2GA) + GETSTATUS(flag_drv[i],S2GB) + GETSTATUS(flag_drv[i],S2VSA) + GETSTATUS(flag_drv[i],S2VSB))>0?"true":"false";
+      page += (GETSTATUS(reg_drv_status[i],S2GA) + GETSTATUS(reg_drv_status[i],S2GB) + GETSTATUS(reg_drv_status[i],S2VSA) + GETSTATUS(reg_drv_status[i],S2VSB))>0?"true":"false";
       page += "</td><td>";
-      page += (GETSTATUS(flag_drv[i],OLA) + GETSTATUS(flag_drv[i],OLB))>0?"true":"false";
+      page += (GETSTATUS(reg_drv_status[i],OLA) + GETSTATUS(reg_drv_status[i],OLB))>0?"true":"false";
       page += "</td></tr>";
   }
   page += "</table>";
@@ -202,13 +228,16 @@ void setup() {
 
   delay(100); // wait to reduce uart reuse pin error
 
-  tmc_sw[1] = new SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64);
-  tmc_sw[2] = new SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64);
-  tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
-  tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
+  if (use_tmc[1]) tmc_sw[1] = new SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64);
+  if (use_tmc[2]) tmc_sw[2] = new SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64);
+  if (use_tmc[3]) tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
+  if (use_tmc[4]) tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
 
   // Init the driver
   for (int i = 0; i <= 4; i++) {
+
+    //if driver disables, go to next
+    if (!use_tmc[i]) continue;
 
     // Initiate the SoftwareSerial
     TMC2208Stepper *tmc;
@@ -236,14 +265,19 @@ void loop() {
   server.handleClient();
 
   for (int i = 0; i <= 4; i++) {
+
+      //if driver disables, go to next
+      if (!use_tmc[i]) continue;
+
       // read the actual amps for the driver
       TMC2208Stepper *tmc = driver[i];
 
-      tmc->DRV_STATUS(&(flag_drv[i]));
-      tmc->MSCURACT(&(value_drv[i]));
+      tmc->DRV_STATUS(&(reg_drv_status[i]));
+      tmc->MSCURACT(&(reg_ms_cur_act[i]));
+      tmc->CHOPCONF(&(reg_chop_conf[i]));
 
-      uint16_t amp_a = GETSTATUS(value_drv[i],CUR_A);
-      uint16_t amp_b = GETSTATUS(value_drv[i],CUR_B);
+      uint16_t amp_a = GETSTATUS(reg_ms_cur_act[i],CUR_A);
+      uint16_t amp_b = GETSTATUS(reg_ms_cur_act[i],CUR_B);
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
 
