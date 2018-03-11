@@ -9,7 +9,7 @@
 // based on the TMC2208Stepper_MACRO.h, return a flag from a read status
 #define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
 
-uint16_t min_current[5] = {0,0,0,0,0};
+uint16_t min_current[5] = {9999,9999,9999,9999,9999};
 uint16_t max_current[5] = {0,0,0,0,0};
 uint16_t act_current[5] = {0,0,0,0,0};
 uint32_t flag_drv[5]    = {0,0,0,0,0};
@@ -58,7 +58,7 @@ String getTemperatureOver (int driverNumber) {
     | driver | current default | current actual | Temperature threshold | over temp | short to gnd | open load |
 */
 String getPage() {
-  String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
+  String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='1'/>";
   page += "<title>TMC2208 Pilot Manager</title>";
   page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
   page += "table { width: 100%; border-collapse : collapse; }";
@@ -117,19 +117,17 @@ String getPage() {
 
 void handleSubmit() {
   // Actualise le GPIO / Update GPIO
-  String LEDValue;
-  LEDValue = server.arg("stepper");
+  String StepperValue;
+  StepperValue = server.arg("stepper");
   //Serial.println("Set GPIO "); //Serial.print(LEDValue);
-  if ( LEDValue == "1" ) {
-    //digitalWrite(LEDPIN, 1);
-    //etatLed = "On";
+  if ( StepperValue == "update" ) {
+    //TODO : add the update value.
     server.send ( 200, "text/html", getPage() );
-  } else if ( LEDValue == "0" ) {
-    //digitalWrite(LEDPIN, 0);
-    //etatLed = "Off";
+  } else if ( StepperValue == "0" ) {
+    //TODO : setup
     server.send ( 200, "text/html", getPage() );
   } else {
-    //Serial.println("Err Led Value");
+    server.send ( 404, "text/html", "" );
   }
 }
 
@@ -142,61 +140,49 @@ void handleRoot(){
 }
 
 void setup() {
-  //Serial.begin(115200);
-  //Serial.println();
 
-  // Connect to Wi-Fi network with SSID and password
-  //Serial.println("Setup the WIFI Access Point (AP)");
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));   // subnet FF FF FF 00
+  WiFi.begin(ssid, password);
 
-  /* You can remove the password parameter if you want the AP to be open. */
-  //Serial.print("... AP Status : ");
-  bool startAP = WiFi.softAP(ssid, password);
-  //Serial.println(startAP?"Ready":"Failed!");
+  while ( WiFi.status() != WL_CONNECTED ) {
+    delay ( 500 );
+  }
 
-  //Serial.printf("...AP Name : %s\n", ssid);
-  //Serial.printf("...AP password : %s\n", password);
-
-  IPAddress myIP = WiFi.softAPIP();
-  //Serial.print("...AP IPaddress: ");
-  //Serial.println(myIP);
-
-  // On branche la fonction qui gère la premiere page / link to the function that manage launch page
+  // link to the function that manage launch page
   server.on ( "/", handleRoot );
 
   server.begin();
-  //Serial.println ( "HTTP server started" );
 
-  //Serial.println ( "End of setup, ready to connect." );
-  //Serial.end();
-
-  tmc_sw[0] = new SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN, false, 64);
   tmc_sw[1] = new SoftwareSerial(TMC_2_RX_PIN, TMC_2_TX_PIN, false, 64);
   tmc_sw[2] = new SoftwareSerial(TMC_3_RX_PIN, TMC_3_TX_PIN, false, 64);
   tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
   tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
 
   //Serial.println ( "Start init driver" );
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i <= 4; i++) {
 
     // Initiate the SoftwareSerial
-    tmc_sw[i]->begin(38400);                             // Init used serial port
-    while(!tmc_sw[i]);                                  // Wait for port to be ready
-    TMC2208Stepper tmc = TMC2208Stepper(tmc_sw[i]);
+    TMC2208Stepper *tmc;
+    if (i==0) {
+      Serial.begin(57600);
+      tmc = new TMC2208Stepper(&Serial);
+    } else {
+      tmc_sw[i]->begin(57600);                             // Init used serial port
+      while(!tmc_sw[i]);                                  // Wait for port to be ready
+      tmc = new TMC2208Stepper(tmc_sw[i]);
+    }
 
     // Setup de driver
-    tmc.pdn_disable(1);													  // Use PDN/UART pin for communication
-    tmc.I_scale_analog(0);												// Adjust current from the registers
-    tmc.rms_current(defaults_amps[i],
-                          defaults_hold_amps[i],
-                          defaults_r_sense[i]);					// Set driver current, multiplier for hold current and RSENSE
-    tmc.microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
-    tmc.en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    tmc.toff(0x2);																// Enable driver
-    //Serial.printf("...driver %d init\n", i);
+    tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
+    tmc->I_scale_analog(0);												  // Adjust current from the registers
+    tmc->rms_current( defaults_amps[i],
+                      defaults_hold_amps[i],
+                      defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
+    tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
+    tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+    //tmc->mstep_reg_select(true);
+    tmc->toff(0x2);																// Enable driver
 
-    driver[i] = &tmc ;
+    driver[i] = tmc ;
   }
 
 }
@@ -204,7 +190,7 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i <= 4; i++) {
       // read the actual amps for the driver
       TMC2208Stepper *tmc = driver[i];
 
@@ -215,11 +201,10 @@ void loop() {
       uint16_t amp_b = GETSTATUS(value_drv[i],CUR_B);
 
       uint16_t amp_tot = abs(amp_a) + abs(amp_b);
-      min_current[i]=(amp_tot < min_current[i])?amp_tot:min_current[i];
-      max_current[i]=(amp_tot > min_current[i])?amp_tot:max_current[i];
-      act_current[i]=amp_tot;
 
-      delay(200);
+      min_current[i] = (amp_tot < min_current[i])?amp_tot:min_current[i];
+      max_current[i] = (amp_tot > max_current[i])?amp_tot:max_current[i];
+      act_current[i] = amp_tot;
   }
 
 }

@@ -11,7 +11,7 @@
 const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
 
 // Set the default microsteps, (2, 4, 8, 16, 32, 64, 128, or 256)
-const int defaults_microsteps[] = {32, 32, 32, 32, 32};
+const int defaults_microsteps[] = {64, 64, 64, 64, 64};
 
 // Enable the spreadCycle on driver
 const bool defaults_en_spreadCycle[] = {false, false, false, false, false};
@@ -23,9 +23,8 @@ const float defaults_hold_amps[] = {0.5, 0.5, 0.5, 0.5, 0.5};
 const float defaults_r_sense[] = {0.11, 0.11, 0.11, 0.11, 0.11};
 
 // Set the value for your Wifi network
-IPAddress    apIP(192, 168, 10, 1);         // Defining a static IP address: AP mode is 192.168.4.1
-const char *ssid      = "TMC2208Pilot-AP";  // Acces Point Name
-const char *password  = "TMC2208PWD";         // Acces Point password (min 8 char, if wrong, start is Failed)
+const char *ssid      = "YOUR_SSID";  // Acces Point Name
+const char *password  = "YOUR_PWD";       // Acces Point password (min 8 char, if wrong, start is Failed)
 
 /****************************************************************************
                     Do not update under this line :-)
