@@ -27,6 +27,9 @@ IPAddress    apIP(192, 168, 10, 1);         // Defining a static IP address: AP 
 const char *ssid      = "TMC2208Pilot-AP";  // Acces Point Name
 const char *password  = "TMC2208PWD";         // Acces Point password (min 8 char, if wrong, start is Failed)
 
+// set the Web page Parameters
+const char *timeToRefresh = "5";         // refresh web page every 10s
+
 /****************************************************************************
                     Do not update under this line :-)
 ****************************************************************************/
