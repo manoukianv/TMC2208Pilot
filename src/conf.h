@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 
+// Setup the start Parameters
+const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
+
 #define TMC_1 true
 #define TMC_2 true
 #define TMC_3 true
