@@ -74,7 +74,9 @@ String getTemperatureOver (int driverNumber) {
 }
 
 String getHeader() {
-    String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
+    String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='";
+    page += timeToRefresh;
+    page += "'/>";
     page += "<title>TMC2208 Pilot Manager</title>";
     page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
     page += "table { width: 100%; border-collapse : collapse; }";
