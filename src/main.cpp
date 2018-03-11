@@ -22,6 +22,27 @@ TMC2208Stepper *driver[5];
 // Set web server port number to 80
 ESP8266WebServer server(80);
 
+
+void applySettings() {
+  for (int i = 0; i <= 4; i++) {
+
+    // Initiate the SoftwareSerial
+    TMC2208Stepper *tmc = driver[i];
+
+    // Setup de driver
+    tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
+    tmc->I_scale_analog(0);												  // Adjust current from the registers
+    tmc->rms_current( defaults_amps[i],
+                      defaults_hold_amps[i],
+                      defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
+    tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
+    tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+    tmc->mstep_reg_select(true);
+    tmc->toff(0x2);																// Enable driver
+
+  }
+}
+
 String getTemperatureThreshold (int driverNumber) {
   if (GETSTATUS(flag_drv[driverNumber],T157)==1) {
     return "<font color='red'> T157 &deg;C</font>";
@@ -52,22 +73,43 @@ String getTemperatureOver (int driverNumber) {
   }
 }
 
+String getHeader() {
+    String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
+    page += "<title>TMC2208 Pilot Manager</title>";
+    page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
+    page += "table { width: 100%; border-collapse : collapse; }";
+    page += "th { background-color: #000088; color : white; }";
+    page += "th, td { padding: 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd; }";
+    page += ".submit { background-color: #4CAF50; border: none; color: white; padding: 5px 15px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; cursor: pointer;}";
+    page += "</style></head>";
+    page += "<body><h1>TMC2208 Monitoring</h1>";
+    return page;
+}
+
+String getPageInfo(String info) {
+  String page = getHeader();
+  page += "<H3>";
+  page += info;
+  page += "</H3>";
+  page += "<form action='/' method='POST'>";
+  page += "<INPUT type='submit' value='Back' class='submit' >";
+  page += "</form>";
+  page += "</body></html>";
+  return page;
+}
+
 /**
     | driver | microsteps default | spreadCycle default | spreadCycle actual | hold current | R Sense |
 
     | driver | current default | current actual | Temperature threshold | over temp | short to gnd | open load |
 */
 String getPage() {
-  String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='1'/>";
-  page += "<title>TMC2208 Pilot Manager</title>";
-  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
-  page += "table { width: 100%; border-collapse : collapse; }";
-  //page += "table, th, td { border : 1px solid black; }";
-  page += "th { background-color: #000088; color : white; }";
-  page += "th, td { padding: 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd; }";
-  page += "</style></head>";
-  page += "<body><h1>TMC2208 Monitoring</h1>";
+  String page = getHeader();
   page += "<h3>Parameters</h3>";
+  page += "<form action='/' method='POST'>";
+  page += "<INPUT type='hidden' name='reapplysettings' value='true'>";
+  page += "<INPUT type='submit' value='Reapply settings now !' class='submit'>";
+  page += "</form>";
   page += "<table>";
   page += "<tr><th>driver</th><th>microsteps</th><th>current</th><th>hold current</th><th>R Sense</th><th>spreadCycle</th></tr>";
   for (size_t i = 0; i < 5; i++) {
@@ -132,8 +174,9 @@ void handleSubmit() {
 }
 
 void handleRoot(){
-  if ( server.hasArg("stepper") ) {
-    handleSubmit();
+  if ( server.hasArg("reapplysettings") ) {
+    applySettings();
+    server.send ( 200, "text/html", getPageInfo("Settings reapplied !") );
   } else {
     server.send ( 200, "text/html", getPage() );
   }
@@ -160,7 +203,7 @@ void setup() {
   tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN, false, 64);
   tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN, false, 64);
 
-  //Serial.println ( "Start init driver" );
+  // Init the driver
   for (int i = 0; i <= 4; i++) {
 
     // Initiate the SoftwareSerial
@@ -174,19 +217,11 @@ void setup() {
       tmc = new TMC2208Stepper(tmc_sw[i]);
     }
 
-    // Setup de driver
-    tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
-    tmc->I_scale_analog(0);												  // Adjust current from the registers
-    tmc->rms_current( defaults_amps[i],
-                      defaults_hold_amps[i],
-                      defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
-    tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
-    tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    tmc->mstep_reg_select(true);
-    tmc->toff(0x2);																// Enable driver
-
     driver[i] = tmc ;
   }
+
+  // setup the driver
+  applySettings();
 
 }
 
