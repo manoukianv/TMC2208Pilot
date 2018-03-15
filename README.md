@@ -14,7 +14,7 @@ You can see the theoretical configuration and the real configuration, and reappl
 WARN : The NodeMCU setup driver at NodeMCU bootup, so if you reset you printer controller, you have to reapply settings !
 
 ## BOM & Wiring
-Check the wiki for [BOM](https://github.com/manoukianv/TMC2208Pilot/wiki/BOM) and wiring
+Check the wiki for [BOM](https://github.com/manoukianv/TMC2208Pilot/wiki/BOM) and [wiring](https://github.com/manoukianv/TMC2208Pilot/wiki/Wiring)
 
 # Quick starts
 ## Installation
