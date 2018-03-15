@@ -13,17 +13,20 @@ You can see the theoretical configuration and the real configuration, and reappl
 
 WARN : The NodeMCU setup driver at NodeMCU bootup, so if you reset you printer controller, you have to reapply settings !
 
+## BOM & Wiring
+Check the wiki for BOM and wiring
+
 # Quick starts
 ## Installation
 1. Download ATOM : https://atom.io/
 2. Install Platform.io for ATOM : https://platformio.org/get-started/ide?install=atom
-3. Get the github page
+3. Download / clone project on the github
 
 ## Setup
 The inital setup values are in <conf.h> file
 
 ## Starting
-1. update the sketch on the ESP8266.
+1. update the sketch on the ESP8266 (Alt + Cmd + U)
 2. connect the serial terminal to get the module IP.
 3. Start a web browser on the URL http://<WIFI IP> . Data are refresh each 10s.
 
