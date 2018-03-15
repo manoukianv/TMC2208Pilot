@@ -23,8 +23,15 @@ TMC2208Stepper *driver[5];
 // Set web server port number to 80
 ESP8266WebServer server(80);
 
+bool DriversBusy = false;
+
 
 void applySettings() {
+
+  // before call driver, wait they are not busy
+  while (DriversBusy) {}
+
+  DriversBusy = true;
   for (int i = 0; i <= 4; i++) {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
@@ -44,6 +51,8 @@ void applySettings() {
     tmc->mstep_reg_select(true);
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
   }
+
+  DriversBusy = false;
 }
 
 uint16_t getMicrostep (uint8_t mres){
@@ -264,26 +273,38 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  for (int i = 0; i <= 4; i++) {
+  if (!DriversBusy) { // if nothing talk with driver, we can read them
+    DriversBusy = true;
+    for (int i = 0; i <= 4; i++) {
 
-      //if driver disables, go to next
-      if (!use_tmc[i]) continue;
+        //if driver disables, go to next
+        if (!use_tmc[i]) continue;
 
-      // read the actual amps for the driver
-      TMC2208Stepper *tmc = driver[i];
+        // read the registers for the driver
+        uint32_t tempValue;
+        TMC2208Stepper *tmc = driver[i];
 
-      tmc->DRV_STATUS(&(reg_drv_status[i]));
-      tmc->MSCURACT(&(reg_ms_cur_act[i]));
-      tmc->CHOPCONF(&(reg_chop_conf[i]));
+        tmc->DRV_STATUS(&tempValue);
+        if (tempValue !=0 ) reg_drv_status[i] = tempValue;
+        tmc->CHOPCONF(&tempValue);
+        if (tempValue !=0 ) reg_chop_conf[i] = tempValue;
+        tmc->MSCURACT(&tempValue);
+        if (tempValue !=0 ) {
+          reg_ms_cur_act[i] = tempValue;
 
-      uint16_t amp_a = GETSTATUS(reg_ms_cur_act[i],CUR_A);
-      uint16_t amp_b = GETSTATUS(reg_ms_cur_act[i],CUR_B);
+          uint16_t amp_a = GETSTATUS(reg_ms_cur_act[i],CUR_A);
+          uint16_t amp_b = GETSTATUS(reg_ms_cur_act[i],CUR_B);
 
-      uint16_t amp_tot = abs(amp_a) + abs(amp_b);
+          uint16_t amp_tot = abs(amp_a) + abs(amp_b);
 
-      min_current[i] = (amp_tot < min_current[i])?amp_tot:min_current[i];
-      max_current[i] = (amp_tot > max_current[i])?amp_tot:max_current[i];
-      act_current[i] = amp_tot;
+          min_current[i] = (amp_tot < min_current[i])?amp_tot:min_current[i];
+          max_current[i] = (amp_tot > max_current[i])?amp_tot:max_current[i];
+          act_current[i] = amp_tot;
+        }
+    }
+    DriversBusy = false;
   }
+
+  delay(100);
 
 }
