@@ -9,7 +9,7 @@
 
 #include "conf.h"
 
-const char *version      = "0.2.2";
+const char *RELEASE      = "0.2.2";
 
 // based on the TMC2208Stepper_MACRO.h, return a flag from a read status
 #define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)

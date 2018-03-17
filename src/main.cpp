@@ -85,7 +85,9 @@ String getHeader() {
     page += "th, td { padding: 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd; }";
     page += ".submit { background-color: #4CAF50; border: none; color: white; padding: 5px 15px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; cursor: pointer;}";
     page += "</style></head>";
-    page += "<body><h1>TMC2208 Monitoring</h1>";
+    page += "<body><h1>TMC2208 Monitoring";
+    page += RELEASE;
+    page += "</H1>";
     return page;
 }
 
