@@ -1,30 +1,4 @@
-#include <Arduino.h>
-#include <TMC2208Stepper.h>
-#include <SoftwareSerial.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include "conf.h"
-#include <TMC2208Stepper_REGDEFS.h>
-
-// based on the TMC2208Stepper_MACRO.h, return a flag from a read status
-#define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
-
-uint16_t min_current[5]     = {9999,9999,9999,9999,9999};
-uint16_t max_current[5]     = {0,0,0,0,0};
-uint16_t act_current[5]     = {0,0,0,0,0};
-uint32_t reg_drv_status[5]  = {0,0,0,0,0};
-uint32_t reg_ms_cur_act[5]  = {0,0,0,0,0};
-uint32_t reg_chop_conf[5]   = {0,0,0,0,0};
-
-SoftwareSerial *tmc_sw[5];
-
-TMC2208Stepper *driver[5];
-
-// Set web server port number to 80
-ESP8266WebServer server(80);
-
-bool DriversBusy = false;
-
+#include "main.h"
 
 void applySettings() {
 
@@ -111,7 +85,9 @@ String getHeader() {
     page += "th, td { padding: 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd; }";
     page += ".submit { background-color: #4CAF50; border: none; color: white; padding: 5px 15px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; cursor: pointer;}";
     page += "</style></head>";
-    page += "<body><h1>TMC2208 Monitoring</h1>";
+    page += "<body><h1>TMC2208 Monitoring";
+    page += RELEASE;
+    page += "</H1>";
     return page;
 }
 
