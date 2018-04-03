@@ -1,15 +1,14 @@
 #include <Arduino.h>
 
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-
 #include <SoftwareSerial.h>
 #include <TMC2208Stepper.h>
 #include <TMC2208Stepper_REGDEFS.h>
 
+#include <SerialCommand.h>
+
 #include "conf.h"
 
-const char *RELEASE      = "0.2.2";
+const char *RELEASE      = "0.3.0";
 
 // based on the TMC2208Stepper_MACRO.h, return a flag from a read status
 #define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
@@ -25,7 +24,7 @@ SoftwareSerial *tmc_sw[5];
 
 TMC2208Stepper *driver[5];
 
-// Set web server port number to 80
-ESP8266WebServer server(80);
+SerialCommand sCmd;     // The demo SerialCommand object
 
 bool DriversBusy = false;
+bool startedMonitoring = false;

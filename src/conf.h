@@ -1,6 +1,3 @@
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-
 // Setup the start Parameters
 const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
 
@@ -27,28 +24,20 @@ const float defaults_r_sense[] = {0.11, 0.11, 0.11, 0.11, 0.11};
 // https://hackaday.com/2016/09/30/3d-printering-trinamic-tmc2130-stepper-motor-drivers-shifting-the-gears/
 const float defaults_toff[] = {8, 8, 8, 8, 8};
 
-// Set the value for your Wifi network
-IPAddress    apIP(192, 168, 10, 1);         // Defining a static IP address: AP mode is 192.168.4.1
-const char *ssid      = "TMC2208Pilot-AP";  // Acces Point Name
-const char *password  = "TMC2208PWD";         // Acces Point password (min 8 char, if wrong, start is Failed)
-
-// set the Web page Parameters
-const char *timeToRefresh = "1";         // refresh web page every 10s
-
 /****************************************************************************
                     Do not update under this line :-)
 ****************************************************************************/
-#define TMC_1_RX_PIN 3
+#define TMC_1_RX_PIN 32
 #define TMC_1_TX_PIN 1
 
-#define TMC_2_RX_PIN 13
-#define TMC_2_TX_PIN 15
+#define TMC_2_RX_PIN 2
+#define TMC_2_TX_PIN 9
 
-#define TMC_3_RX_PIN 14
-#define TMC_3_TX_PIN 12
+#define TMC_3_RX_PIN 10
+#define TMC_3_TX_PIN 11
 
-#define TMC_4_RX_PIN 0
-#define TMC_4_TX_PIN 2
+#define TMC_4_RX_PIN 12
+#define TMC_4_TX_PIN 13
 
-#define TMC_5_RX_PIN 5
-#define TMC_5_TX_PIN 4
+#define TMC_5_RX_PIN 14
+#define TMC_5_TX_PIN 15
