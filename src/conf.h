@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 // Setup the start Parameters
 const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
 
@@ -9,7 +11,7 @@ const bool use_tmc[] = {true, true, true, true, false};
 const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
 
 // Set the default microsteps, (2, 4, 8, 16, 32, 64, 128, or 256)
-const int defaults_microsteps[] = {64, 64, 32, 64, 64};
+const uint16_t defaults_microsteps[] = {64, 64, 32, 64, 64};
 
 // Enable the spreadCycle on driver
 const bool defaults_en_spreadCycle[] = {false, false, false, false, false};

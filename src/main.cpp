@@ -1,5 +1,20 @@
 #include "main.h"
 
+uint16_t getMicrostep (uint8_t mres){
+	switch(mres) {
+		case 0: return 256;
+		case 1: return 128;
+		case 2: return  64;
+		case 3: return  32;
+		case 4: return  16;
+		case 5: return   8;
+		case 6: return   4;
+		case 7: return   2;
+		case 8: return   0;
+	}
+	return 0;
+}
+
 void applySettings() {
   Serial.println("applySettings");
 
@@ -29,25 +44,31 @@ void applySettings() {
     tmc->mstep_reg_select(true);
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
 
-    tmc->rms_current()
+    /*
+    Serial.println(tmc->pdn_disable());
+    Serial.println(tmc->I_scale_analog());
+    Serial.println(tmc->rms_current());
+    Serial.println(tmc->microsteps());
+    Serial.println(tmc->en_spreadCycle());
+    Serial.println(tmc->mstep_reg_select());
+    Serial.println(tmc->toff());
+    */
+
+    conf_checked[i] =
+      tmc->pdn_disable() == 1 &&
+      tmc->I_scale_analog() == 0 &&
+      //tmc->rms_current() == defaults_amps[i] && TODO Check the current is hard !
+      tmc->microsteps() == defaults_microsteps[i] &&
+      tmc->en_spreadCycle() == defaults_en_spreadCycle[i] &&
+      tmc->mstep_reg_select() == 1 &&
+      tmc->toff() == defaults_toff[i];
+
+    Serial.print("driver ");Serial.print(i+1);Serial.print(" init done, and check control is : ");
+    Serial.println(conf_checked[i]==1?"true":"false");
+
   }
 
   DriversBusy = false;
-}
-
-uint16_t getMicrostep (uint8_t mres){
-	switch(mres) {
-		case 0: return 256;
-		case 1: return 128;
-		case 2: return  64;
-		case 3: return  32;
-		case 4: return  16;
-		case 5: return   8;
-		case 6: return   4;
-		case 7: return   2;
-		case 8: return   0;
-	}
-	return 0;
 }
 
 String getTemperatureThreshold (int driverNumber) {
@@ -82,7 +103,7 @@ String getTemperatureOver (int driverNumber) {
 
 void getConfig() {
   String spacer = " \t ";
-  Serial.println("driver \t microsteps \t current \t hold current \t R Sense \t spreadCycle");
+  Serial.println("driver \t microsteps \t current \t hold current \t R Sense \t spreadCycle \t conf Status");
   for (size_t i = 0; i < 5; i++) {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
@@ -100,6 +121,9 @@ void getConfig() {
     Serial.print(spacer);
     Serial.print(spacer);
     Serial.print(defaults_en_spreadCycle[i]?"true":"false");
+    Serial.print(spacer);
+    Serial.print(spacer);
+    Serial.print(conf_checked[i]==1?"OK":"ERROR !");    
     Serial.println();
   }
 }

@@ -19,6 +19,7 @@ uint16_t act_current[5]     = {0,0,0,0,0};
 uint32_t reg_drv_status[5]  = {0,0,0,0,0};
 uint32_t reg_ms_cur_act[5]  = {0,0,0,0,0};
 uint32_t reg_chop_conf[5]   = {0,0,0,0,0};
+bool     conf_checked[5]    = {false, false, false, false, false};
 
 SoftwareSerial *tmc_sw[5];
 
