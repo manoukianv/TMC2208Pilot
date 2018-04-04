@@ -174,10 +174,12 @@ void setup() {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
 
+    TMC2208Stepper *tmc;
     // Initiate the SoftwareSerial
     tmc_sw[i]->begin(19200);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
-    driver[i] = new TMC2208Stepper(tmc_sw[i]);
+    tmc = new TMC2208Stepper(tmc_sw[i]);
+    driver[i] = tmc;
 
   }
 
