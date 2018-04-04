@@ -27,17 +27,17 @@ const float defaults_toff[] = {8, 8, 8, 8, 8};
 /****************************************************************************
                     Do not update under this line :-)
 ****************************************************************************/
-#define TMC_1_RX_PIN 32
-#define TMC_1_TX_PIN 1
+#define TMC_1_RX_PIN 2
+#define TMC_1_TX_PIN 3
 
-#define TMC_2_RX_PIN 2
-#define TMC_2_TX_PIN 9
+#define TMC_2_RX_PIN 4
+#define TMC_2_TX_PIN 5
 
-#define TMC_3_RX_PIN 10
-#define TMC_3_TX_PIN 11
+#define TMC_3_RX_PIN 6
+#define TMC_3_TX_PIN 7
 
-#define TMC_4_RX_PIN 12
-#define TMC_4_TX_PIN 13
+#define TMC_4_RX_PIN 8
+#define TMC_4_TX_PIN 9
 
-#define TMC_5_RX_PIN 14
-#define TMC_5_TX_PIN 15
+#define TMC_5_RX_PIN 10
+#define TMC_5_TX_PIN 11

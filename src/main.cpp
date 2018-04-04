@@ -157,6 +157,8 @@ void setup() {
   sCmd.addCommand("startMon", startMon);
   sCmd.addCommand("stopMon", stopMon);
   sCmd.setDefaultHandler(unrecognized);      // Handler for command that isn't matched  (says "What?")
+  Serial.print("TMC2208Pilot v");
+  Serial.println(RELEASE);
   Serial.println("Startup...");
 
   if (use_tmc[0]) tmc_sw[0] = new SoftwareSerial(TMC_1_RX_PIN, TMC_1_TX_PIN);
@@ -173,7 +175,7 @@ void setup() {
     if (!use_tmc[i]) continue;
 
     // Initiate the SoftwareSerial
-    tmc_sw[i]->begin(57600);                             // Init used serial port
+    tmc_sw[i]->begin(19200);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
     driver[i] = new TMC2208Stepper(tmc_sw[i]);
 
@@ -204,6 +206,7 @@ void loop() {
         uint32_t tempValue;
         TMC2208Stepper *tmc = driver[i];
 
+        delay(50);
         tmc->DRV_STATUS(&tempValue);
         if (tempValue !=0 ) reg_drv_status[i] = tempValue;
         delay(50);
