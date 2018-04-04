@@ -1,6 +1,7 @@
 #include "main.h"
 
 void applySettings() {
+  Serial.println("applySettings");
 
   // before call driver, wait they are not busy
   while (DriversBusy) {}
@@ -9,6 +10,9 @@ void applySettings() {
   for (int i = 0; i <= 4; i++) {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
+
+    // enable serial RX before call
+    tmc_sw[i]->listen();
 
     // Initiate the SoftwareSerial
     TMC2208Stepper *tmc = driver[i];
@@ -24,6 +28,8 @@ void applySettings() {
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     tmc->mstep_reg_select(true);
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
+
+    tmc->rms_current()
   }
 
   DriversBusy = false;
@@ -157,6 +163,7 @@ void setup() {
   sCmd.addCommand("startMon", startMon);
   sCmd.addCommand("stopMon", stopMon);
   sCmd.setDefaultHandler(unrecognized);      // Handler for command that isn't matched  (says "What?")
+
   Serial.print("TMC2208Pilot v");
   Serial.println(RELEASE);
   Serial.println("Startup...");
@@ -167,19 +174,16 @@ void setup() {
   if (use_tmc[3]) tmc_sw[3] = new SoftwareSerial(TMC_4_RX_PIN, TMC_4_TX_PIN);
   if (use_tmc[4]) tmc_sw[4] = new SoftwareSerial(TMC_5_RX_PIN, TMC_5_TX_PIN);
 
-
   // Init the driver
   for (int i = 0; i <= 4; i++) {
 
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
 
-    TMC2208Stepper *tmc;
     // Initiate the SoftwareSerial
     tmc_sw[i]->begin(19200);                             // Init used serial port
     while(!tmc_sw[i]);                                  // Wait for port to be ready
-    tmc = new TMC2208Stepper(tmc_sw[i]);
-    driver[i] = tmc;
+    driver[i] = new TMC2208Stepper(tmc_sw[i]);
 
   }
 
@@ -203,6 +207,9 @@ void loop() {
 
         //if driver disables, go to next
         if (!use_tmc[i]) continue;
+
+        // enable reception on this serial, else no read value
+        tmc_sw[i]->listen();
 
         // read the registers for the driver
         uint32_t tempValue;
@@ -231,7 +238,5 @@ void loop() {
     }
     DriversBusy = false;
   }
-
-  delay(100);
 
 }

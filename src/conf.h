@@ -3,7 +3,7 @@ const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
 
 // Define which drivers you used, see pinout to disable unused drivers
 // 5 drivers max are available
-const bool use_tmc[] = {true, true, true, false, false};
+const bool use_tmc[] = {true, true, true, true, false};
 
 // Set the default current amps, max amp is 1700mA (1.7A)
 const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
