@@ -36,39 +36,65 @@ void applySettings() {
     tmc->toff(0x0);																// Disable driver
     tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
     tmc->I_scale_analog(0);												  // Adjust current from the registers
-    tmc->rms_current( defaults_amps[i],
-                      defaults_hold_amps[i],
-                      defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
+    tmc->rms_current(defaults_amps[i]);					// Set driver current
     tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     tmc->mstep_reg_select(true);
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
-
-    /*
-    Serial.println(tmc->pdn_disable());
-    Serial.println(tmc->I_scale_analog());
-    Serial.println(tmc->rms_current());
-    Serial.println(tmc->microsteps());
-    Serial.println(tmc->en_spreadCycle());
-    Serial.println(tmc->mstep_reg_select());
-    Serial.println(tmc->toff());
-    */
-
-    conf_checked[i] =
-      tmc->pdn_disable() == 1 &&
-      tmc->I_scale_analog() == 0 &&
-      //tmc->rms_current() == defaults_amps[i] && TODO Check the current is hard !
-      tmc->microsteps() == defaults_microsteps[i] &&
-      tmc->en_spreadCycle() == defaults_en_spreadCycle[i] &&
-      tmc->mstep_reg_select() == 1 &&
-      tmc->toff() == defaults_toff[i];
-
-    Serial.print("driver ");Serial.print(i+1);Serial.print(" init done, and check control is : ");
-    Serial.println(conf_checked[i]==1?"true":"false");
-
   }
 
   DriversBusy = false;
+}
+
+bool checkConfig() {
+	  Serial.println("checkConfig");
+
+	  // before call driver, wait they are not busy
+	  while (DriversBusy) {}
+
+	  DriversBusy = true;
+	  for (int i = 0; i <= 4; i++) {
+	    //if driver disables, go to next
+	    if (!use_tmc[i]) continue;
+
+	    // enable serial RX before call
+	    tmc_sw[i]->listen();
+
+	    // Initiate the SoftwareSerial
+	    TMC2208Stepper *tmc = driver[i];
+
+	    /*
+	    Serial.println(tmc->pdn_disable());
+	    Serial.println(tmc->I_scale_analog());
+	    Serial.println(tmc->rms_current());
+	    Serial.println(tmc->microsteps());
+	    Serial.println(tmc->en_spreadCycle());
+	    Serial.println(tmc->mstep_reg_select());
+	    Serial.println(tmc->toff());
+	    */
+
+	    conf_checked[i] =
+	      tmc->pdn_disable() == 1 &&
+	      tmc->I_scale_analog() == 0 &&
+	      //tmc->rms_current() == defaults_amps[i] && TODO Check the current is hard !
+	      tmc->microsteps() == defaults_microsteps[i] &&
+	      tmc->en_spreadCycle() == defaults_en_spreadCycle[i] &&
+	      tmc->mstep_reg_select() == 1 &&
+	      tmc->toff() == defaults_toff[i];
+
+	    Serial.print("driver ");Serial.print(i+1);Serial.print(" init done, and check control is : ");
+	    Serial.println(conf_checked[i]==1?"true":"false");
+
+	  }
+
+	  DriversBusy = false;
+
+		for (int i = 0; i <= 4; i++) {
+			if (!use_tmc[i]) continue;
+			if (!conf_checked[i]) return false;
+		}
+
+		return true;
 }
 
 void readData() {
@@ -141,7 +167,7 @@ String getTemperatureOver (int driverNumber) {
 
 void getConfig() {
   String spacer = " \t ";
-  Serial.println("driver \t microsteps \t current \t hold current \t R Sense \t spreadCycle \t conf Status");
+  Serial.println("driver \t microsteps \t current \t spreadCycle \t conf Status");
   for (size_t i = 0; i < 5; i++) {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
@@ -152,11 +178,6 @@ void getConfig() {
     Serial.print(spacer);
     Serial.print(spacer);
     Serial.print(defaults_amps[i]);
-    Serial.print(spacer);
-    Serial.print(defaults_hold_amps[i] * defaults_amps[i]);
-    Serial.print(spacer);
-    Serial.print(defaults_r_sense[i]);
-    Serial.print(spacer);
     Serial.print(spacer);
     Serial.print(defaults_en_spreadCycle[i]?"true":"false");
     Serial.print(spacer);
@@ -220,6 +241,10 @@ void unrecognized(const char *command) {
 void setup() {
 
   Serial.begin(57600);
+
+	pinMode(LED_PIN, OUTPUT);
+	digitalWrite(LED_PIN, LOW);
+
   sCmd.addCommand("getConf", getConfig);
   sCmd.addCommand("getMon", getMonitoring);
   sCmd.addCommand("startMon", startMon);
@@ -254,6 +279,11 @@ void setup() {
 
   // setup the driver
   applySettings();
+
+	bool initIsOK = checkConfig();
+	if (!initIsOK) {
+		digitalWrite(LED_PIN, HIGH);
+	}
 
   Serial.println("Startup end !");
 
