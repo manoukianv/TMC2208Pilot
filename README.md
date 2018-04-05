@@ -1,17 +1,15 @@
 # TMC2208Pilot
 ## Description
-Application running on ESP8266/NodeMCU to setup and monitor TMC2208 by UART. You can :
+Application running on Arduino to setup and monitor TMC2208 by UART. You can :
 * Setup the currents, hold currents
 * Setup Microsteps from 1 to 256 real
 * Switch beetween StealChop and SpreadCycle
 * Monitoring temperature, max_current, actual mode (StealChop and SpreadCycle) and actual microstepping.
 
 ## How does it works :
-The NodeMCU create a Wifi network called "TMC2208Pilot-AP" with the password "TMC2208PWD" (please change the parameters in the setup file).
-Connect a computer/phone/tablet to this network and open a web browser on the 192.168.10.1, the application appears.
-You can see the theoretical configuration and the real configuration, and reapply config.
+Connect a usb connector to power off the
 
-WARN : The NodeMCU setup driver at NodeMCU bootup, so if you reset you printer controller, you have to reapply settings !
+WARN : The arduino setup driver in startup step, so if you reset you printer controller, you have to reapply settings or wiring the reset pin of the arduino board on the reset pin of the main board (check the voltage signal before : all is fine with the arduino board) !
 
 ## BOM & Wiring
 Check the wiki for [BOM](https://github.com/manoukianv/TMC2208Pilot/wiki/BOM) and [wiring](https://github.com/manoukianv/TMC2208Pilot/wiki/Wiring)
@@ -26,9 +24,17 @@ Check the wiki for [BOM](https://github.com/manoukianv/TMC2208Pilot/wiki/BOM) an
 The inital setup values are in <conf.h> file
 
 ## Starting
-1. update the sketch on the ESP8266 (Alt + Cmd + U)
-2. connect the serial terminal to get the module IP.
-3. Start a web browser on the URL http://<WIFI IP> . Data are refresh each 10s.
+1. update the sketch on the arduino (Alt + Cmd + U)
+2. connect the serial terminal to use commands.
+
+## Commands
+Command can be send to the arduino by the terminal port (case sensitive)
+* getConf : display the settings
+* startMon : start to monitoring drivers, start to collect data (this can stress drivers)
+* getMon : display the collected data
+* stopMon : stop to collect data
+
+Do not use monitoring on a full print, just do it several time to collect and check data
 
 # Copyright
 Using this free lib https://github.com/teemuatlut/TMC2208Stepper
