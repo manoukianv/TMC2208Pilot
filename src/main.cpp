@@ -71,6 +71,44 @@ void applySettings() {
   DriversBusy = false;
 }
 
+void readData() {
+	DriversBusy = true;
+	for (int i = 0; i <= 4; i++) {
+
+			//if driver disables, go to next
+			if (!use_tmc[i]) continue;
+
+			// enable reception on this serial, else no read value
+			tmc_sw[i]->listen();
+
+			// read the registers for the driver
+			uint32_t tempValue;
+			TMC2208Stepper *tmc = driver[i];
+
+			delay(50);
+			tmc->DRV_STATUS(&tempValue);
+			if (tempValue !=0 ) reg_drv_status[i] = tempValue;
+			delay(50);
+			tmc->CHOPCONF(&tempValue);
+			if (tempValue !=0 ) reg_chop_conf[i] = tempValue;
+			delay(50);
+			tmc->MSCURACT(&tempValue);
+			if (tempValue !=0 ) {
+				reg_ms_cur_act[i] = tempValue;
+
+				uint16_t amp_a = GETSTATUS(reg_ms_cur_act[i],CUR_A);
+				uint16_t amp_b = GETSTATUS(reg_ms_cur_act[i],CUR_B);
+
+				uint16_t amp_tot = abs(amp_a) + abs(amp_b);
+
+				min_current[i] = (amp_tot < min_current[i])?amp_tot:min_current[i];
+				max_current[i] = (amp_tot > max_current[i])?amp_tot:max_current[i];
+				act_current[i] = amp_tot;
+			}
+	}
+	DriversBusy = false;
+}
+
 String getTemperatureThreshold (int driverNumber) {
   if (GETSTATUS(reg_drv_status[driverNumber],T157)==1) {
     return "157";
@@ -123,7 +161,7 @@ void getConfig() {
     Serial.print(defaults_en_spreadCycle[i]?"true":"false");
     Serial.print(spacer);
     Serial.print(spacer);
-    Serial.print(conf_checked[i]==1?"OK":"ERROR !");    
+    Serial.print(conf_checked[i]==1?"OK":"ERROR !");
     Serial.println();
   }
 }
@@ -226,41 +264,7 @@ void loop() {
   sCmd.readSerial();
 
   if (!DriversBusy && startedMonitoring) { // if nothing talk with driver, we can read them
-    DriversBusy = true;
-    for (int i = 0; i <= 4; i++) {
-
-        //if driver disables, go to next
-        if (!use_tmc[i]) continue;
-
-        // enable reception on this serial, else no read value
-        tmc_sw[i]->listen();
-
-        // read the registers for the driver
-        uint32_t tempValue;
-        TMC2208Stepper *tmc = driver[i];
-
-        delay(50);
-        tmc->DRV_STATUS(&tempValue);
-        if (tempValue !=0 ) reg_drv_status[i] = tempValue;
-        delay(50);
-        tmc->CHOPCONF(&tempValue);
-        if (tempValue !=0 ) reg_chop_conf[i] = tempValue;
-        delay(50);
-        tmc->MSCURACT(&tempValue);
-        if (tempValue !=0 ) {
-          reg_ms_cur_act[i] = tempValue;
-
-          uint16_t amp_a = GETSTATUS(reg_ms_cur_act[i],CUR_A);
-          uint16_t amp_b = GETSTATUS(reg_ms_cur_act[i],CUR_B);
-
-          uint16_t amp_tot = abs(amp_a) + abs(amp_b);
-
-          min_current[i] = (amp_tot < min_current[i])?amp_tot:min_current[i];
-          max_current[i] = (amp_tot > max_current[i])?amp_tot:max_current[i];
-          act_current[i] = amp_tot;
-        }
-    }
-    DriversBusy = false;
+		readData();
   }
 
 }
