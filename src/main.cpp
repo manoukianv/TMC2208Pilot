@@ -36,9 +36,7 @@ void applySettings() {
     tmc->toff(0x0);																// Disable driver
     tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
     tmc->I_scale_analog(0);												  // Adjust current from the registers
-    tmc->rms_current( defaults_amps[i],
-                      defaults_hold_amps[i],
-                      defaults_r_sense[i] );					// Set driver current, multiplier for hold current and RSENSE
+    tmc->rms_current(defaults_amps[i]);					// Set driver current
     tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
     tmc->mstep_reg_select(true);
@@ -169,7 +167,7 @@ String getTemperatureOver (int driverNumber) {
 
 void getConfig() {
   String spacer = " \t ";
-  Serial.println("driver \t microsteps \t current \t hold current \t R Sense \t spreadCycle \t conf Status");
+  Serial.println("driver \t microsteps \t current \t spreadCycle \t conf Status");
   for (size_t i = 0; i < 5; i++) {
     //if driver disables, go to next
     if (!use_tmc[i]) continue;
@@ -180,11 +178,6 @@ void getConfig() {
     Serial.print(spacer);
     Serial.print(spacer);
     Serial.print(defaults_amps[i]);
-    Serial.print(spacer);
-    Serial.print(defaults_hold_amps[i] * defaults_amps[i]);
-    Serial.print(spacer);
-    Serial.print(defaults_r_sense[i]);
-    Serial.print(spacer);
     Serial.print(spacer);
     Serial.print(defaults_en_spreadCycle[i]?"true":"false");
     Serial.print(spacer);
