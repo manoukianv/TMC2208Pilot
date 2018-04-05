@@ -43,3 +43,5 @@ const float defaults_toff[] = {8, 8, 8, 8, 8};
 
 #define TMC_5_RX_PIN 10
 #define TMC_5_TX_PIN 11
+
+#define LED_PIN      13
