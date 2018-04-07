@@ -36,10 +36,11 @@ void applySettings() {
     tmc->toff(0x0);																// Disable driver
     tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
     tmc->I_scale_analog(0);												  // Adjust current from the registers
-    tmc->rms_current(defaults_amps[i]);					// Set driver current
-    tmc->microsteps(defaults_microsteps[i]);       // Set the defaults_microsteps
+    tmc->rms_current(defaults_amps[i]); 						// Set driver current
+    tmc->microsteps(defaults_microsteps[i]);        // Set the defaults_microsteps
+		tmc->intpol(defaults_256_step_interpol[i]);			// enable or disable 256 microsteps interpolation
+		tmc->mstep_reg_select(true);										 // enable the microsteps settings by register
     tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
-    tmc->mstep_reg_select(true);
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
   }
 
@@ -63,23 +64,13 @@ bool checkConfig() {
 	    // Initiate the SoftwareSerial
 	    TMC2208Stepper *tmc = driver[i];
 
-	    /*
-	    Serial.println(tmc->pdn_disable());
-	    Serial.println(tmc->I_scale_analog());
-	    Serial.println(tmc->rms_current());
-	    Serial.println(tmc->microsteps());
-	    Serial.println(tmc->en_spreadCycle());
-	    Serial.println(tmc->mstep_reg_select());
-	    Serial.println(tmc->toff());
-	    */
-
 	    conf_checked[i] =
 	      tmc->pdn_disable() == 1 &&
 	      tmc->I_scale_analog() == 0 &&
-	      //tmc->rms_current() == defaults_amps[i] && TODO Check the current is hard !
 	      tmc->microsteps() == defaults_microsteps[i] &&
+				tmc->intpol() == defaults_256_step_interpol[i] &&
+				tmc->mstep_reg_select() == 1 &&
 	      tmc->en_spreadCycle() == defaults_en_spreadCycle[i] &&
-	      tmc->mstep_reg_select() == 1 &&
 	      tmc->toff() == defaults_toff[i];
 
 	    Serial.print("driver ");Serial.print(i+1);Serial.print(" check control is : ");

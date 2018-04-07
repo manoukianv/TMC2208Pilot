@@ -13,7 +13,8 @@ const bool use_tmc[] = {true, true, true, true, false};
 const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
 
 // Set the default microsteps, (2, 4, 8, 16, 32, 64, 128, or 256)
-const uint16_t defaults_microsteps[] = {64, 64, 32, 64, 64};
+const uint16_t defaults_microsteps[]        = {64, 64, 32, 64, 64};
+const bool     defaults_256_step_interpol[] = {false, false, false, false, false};
 
 // Enable the spreadCycle on driver
 const bool defaults_en_spreadCycle[] = {false, false, false, false, false};
