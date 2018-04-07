@@ -296,7 +296,7 @@ void setup() {
 
 void loop() {
 
-	unsigned long time;
+	unsigned long time = millis();
 
   sCmd.readSerial();
 

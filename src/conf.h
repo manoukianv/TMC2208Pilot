@@ -14,10 +14,10 @@ const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
 
 // Set the default microsteps, (2, 4, 8, 16, 32, 64, 128, or 256)
 const uint16_t defaults_microsteps[]        = {64, 64, 32, 64, 64};
-const bool     defaults_256_step_interpol[] = {false, false, false, false, false};
+const bool     defaults_256_step_interpol[] = {true, true, true, true, true};
 
 // Enable the spreadCycle on driver
-const bool defaults_en_spreadCycle[] = {false, false, false, false, false};
+const bool defaults_en_spreadCycle[] = {false, false, false, true, false};
 
 // Set the default TOFF (0, driver disabled, more than 2 for StealChop, beetween 2-15 for spreadCycle)
 // https://hackaday.com/2016/09/30/3d-printering-trinamic-tmc2130-stepper-motor-drivers-shifting-the-gears/
