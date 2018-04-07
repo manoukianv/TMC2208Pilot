@@ -1,7 +1,9 @@
 #include <Arduino.h>
 
 // Setup the start Parameters
-const int startup_wait_before_init_driver = 5000; //delay in ms, default 5000
+const unsigned long DELAY_BEFORE_STARTUP_CONF = 5000;  //delay in ms, default 5000
+const unsigned long DELAY_BEETWEEN_CHECK_CONF = 3000;  // delay beetween 2 checkConfig requested by pin
+const bool          AUTO_CONF_ON_ERROR        = true;  //restart conf automaticaly if checkIsFailed
 
 // Define which drivers you used, see pinout to disable unused drivers
 // 5 drivers max are available
@@ -23,19 +25,21 @@ const float defaults_toff[] = {8, 8, 8, 8, 8};
 /****************************************************************************
                     Do not update under this line :-)
 ****************************************************************************/
-#define TMC_1_RX_PIN 2
-#define TMC_1_TX_PIN 3
+#define TMC_1_RX_PIN 3
+#define TMC_1_TX_PIN 2
 
-#define TMC_2_RX_PIN 4
-#define TMC_2_TX_PIN 5
+#define TMC_2_RX_PIN 5
+#define TMC_2_TX_PIN 4
 
-#define TMC_3_RX_PIN 6
-#define TMC_3_TX_PIN 7
+#define TMC_3_RX_PIN 7
+#define TMC_3_TX_PIN 6
 
-#define TMC_4_RX_PIN 8
-#define TMC_4_TX_PIN 9
+#define TMC_4_RX_PIN 9
+#define TMC_4_TX_PIN 8
 
 #define TMC_5_RX_PIN 10
 #define TMC_5_TX_PIN 11
 
-#define LED_PIN      13
+#define ERROR_PIN    13
+
+#define CHECK_PIN    14

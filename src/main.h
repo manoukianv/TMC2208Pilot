@@ -29,3 +29,7 @@ SerialCommand sCmd;     // The demo SerialCommand object
 
 bool DriversBusy = false;
 bool startedMonitoring = false;
+bool isConfigOK;
+
+// used for timer
+unsigned long lastTime = 0;

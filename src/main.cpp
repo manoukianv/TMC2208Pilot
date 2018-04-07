@@ -82,7 +82,7 @@ bool checkConfig() {
 	      tmc->mstep_reg_select() == 1 &&
 	      tmc->toff() == defaults_toff[i];
 
-	    Serial.print("driver ");Serial.print(i+1);Serial.print(" init done, and check control is : ");
+	    Serial.print("driver ");Serial.print(i+1);Serial.print(" check control is : ");
 	    Serial.println(conf_checked[i]==1?"true":"false");
 
 	  }
@@ -238,12 +238,28 @@ void unrecognized(const char *command) {
   Serial.println("getConf, getMon, startMon, stopMon");
 }
 
+bool checkConfigAndSendDiag() {
+	isConfigOK = checkConfig();
+	Serial.print("Config is ");
+	Serial.println(isConfigOK?"OK":"on ERROR");
+	if (isConfigOK) {
+		digitalWrite(ERROR_PIN, LOW);
+	} else {
+		digitalWrite(ERROR_PIN, HIGH);
+	}
+	return isConfigOK;
+}
+
 void setup() {
 
   Serial.begin(57600);
 
-	pinMode(LED_PIN, OUTPUT);
-	digitalWrite(LED_PIN, LOW);
+	// the
+	pinMode(ERROR_PIN, OUTPUT);
+	digitalWrite(ERROR_PIN, HIGH);
+
+	//pinMode(CHECK_PIN, INPUT);
+	//lastCheckLevelSignal = digitalRead(CHECK_PIN);
 
   sCmd.addCommand("getConf", getConfig);
   sCmd.addCommand("getMon", getMonitoring);
@@ -275,15 +291,13 @@ void setup() {
   }
 
   // at startup wait driver are online to setup them
-  delay(startup_wait_before_init_driver);
+  delay(DELAY_BEFORE_STARTUP_CONF);
 
   // setup the driver
   applySettings();
 
-	bool initIsOK = checkConfig();
-	if (!initIsOK) {
-		digitalWrite(LED_PIN, HIGH);
-	}
+	// check the actual config of drivers and if wrong switch HIGH pin ERROR
+	checkConfigAndSendDiag();
 
   Serial.println("Startup end !");
 
@@ -291,10 +305,26 @@ void setup() {
 
 void loop() {
 
+	unsigned long time;
+
   sCmd.readSerial();
 
-  if (!DriversBusy && startedMonitoring) { // if nothing talk with driver, we can read them
+	// if the monitoring is started, read the drivers data
+  if (!DriversBusy && isConfigOK && startedMonitoring) { // if nothing talk with driver, we can read them
 		readData();
   }
+
+	if (!isConfigOK && AUTO_CONF_ON_ERROR) {
+		Serial.println("Auto restart config on error...");
+		applySettings();
+		checkConfigAndSendDiag();
+	}
+
+	// if pin "check" is up, check the config, and wait 1 sec before do a new step on
+	if (digitalRead(CHECK_PIN) && ((time - lastTime)>DELAY_BEETWEEN_CHECK_CONF)) {
+		Serial.println("Check pin is enable and it's time to check...");
+		lastTime = time;
+		checkConfigAndSendDiag();
+	}
 
 }
