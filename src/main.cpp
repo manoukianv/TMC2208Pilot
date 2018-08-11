@@ -287,7 +287,7 @@ void unrecognized(const char *command) {
 void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
 
 	// sanity check on channel value
-	if (channel<0 || channel>5 || !use_tmc[channel]) return;
+	if (channel<0 || channel>4 || !use_tmc[channel]) return;
 
 	// Initiate the SoftwareSerial
 	TMC2208Stepper *tmc = driver[channel];
