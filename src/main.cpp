@@ -295,6 +295,9 @@ void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
 	switch (command) {
 		case RESET_CONF_REG :
 				//TODO perhaps reinit the register, but not necessary during test phase
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = 1;          // return 1 to say init is OK
 				break;
 		case SET_MICROSTEP_REG :
 				tmc->microsteps(value);
@@ -375,7 +378,7 @@ void requestEvent() {
   datagram |= i2c_channel_req;
 
   uint8_t buf[] {(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
-  Wire.write(buf, 3); // respond with message of 6 bytes
+  Wire.write(buf, 3); // respond with message of 3 bytes
   // as expected by master
 }
 
