@@ -1,21 +1,31 @@
 #include "main.h"
 
-uint16_t getMicrostep (uint8_t mres){
-	switch(mres) {
-		case 0: return 256;
-		case 1: return 128;
-		case 2: return  64;
-		case 3: return  32;
-		case 4: return  16;
-		case 5: return   8;
-		case 6: return   4;
-		case 7: return   2;
-		case 8: return   0;
-	}
-	return 0;
-}
+#include <SoftwareSerial.h>
+#include <TMC2208Stepper.h>
+#include <TMC2208Stepper_REGDEFS.h>
+#include <Wire.h>
+#include <SerialCommand.h>
 
-void applySettings() {
+#include "conf.h"
+
+#define RESET_CONF_REG              0
+#define SET_MICROSTEP_REG           1
+#define SET_CURRENT_REG             2
+#define SET_INTERPOL_256_REG        3
+#define SET_SPREADCYCLE_EN_REG      4
+#define SET_ENABLE_REG              5
+#define GET_MICROSTEP_REG           6
+#define GET_CURRENT_REG             7
+#define GET_INTERPOL_256_REG        8
+#define GET_SPREADCYCLE_EN_REG      9
+#define GET_ENABLE_REG              10
+#define GET_ALARM_REG               11
+
+//*************************************************************************************
+//		                               Config section
+//*************************************************************************************
+
+void applySettings(bool enable_i2c) {
   Serial.println("applySettings");
 
   // before call driver, wait they are not busy
@@ -33,21 +43,25 @@ void applySettings() {
     TMC2208Stepper *tmc = driver[i];
 
     // Setup de driver
-    tmc->toff(0x0);																// Disable driver
+    tmc->toff(0x0);																	// Disable driver
     tmc->pdn_disable(1);													  // Use PDN/UART pin for communication
     tmc->I_scale_analog(0);												  // Adjust current from the registers
-    tmc->rms_current(defaults_amps[i]); 						// Set driver current
-    tmc->microsteps(defaults_microsteps[i]);        // Set the defaults_microsteps
-		tmc->intpol(defaults_256_step_interpol[i]);			// enable or disable 256 microsteps interpolation
 		tmc->mstep_reg_select(true);										 // enable the microsteps settings by register
-    tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+
+		if (!enable_i2c) {																// only use the configuration section file if i2c is not enable
+	    tmc->rms_current(defaults_amps[i]); 						// Set driver current
+	    tmc->microsteps(defaults_microsteps[i]);        // Set the defaults_microsteps
+			tmc->intpol(defaults_256_step_interpol[i]);			// enable or disable 256 microsteps interpolation
+			tmc->en_spreadCycle(defaults_en_spreadCycle[i]); // Set the spreadCycle
+    }
+
     tmc->toff(defaults_toff[i]);										// Enable driver or setup the spreadCycle value
   }
 
   DriversBusy = false;
 }
 
-bool checkConfig() {
+bool checkConfig(bool enable_i2c) {
 	  Serial.println("checkConfig");
 
 	  // before call driver, wait they are not busy
@@ -64,14 +78,19 @@ bool checkConfig() {
 	    // Initiate the SoftwareSerial
 	    TMC2208Stepper *tmc = driver[i];
 
+			// Init the internal information
 	    conf_checked[i] =
-	      tmc->pdn_disable() == 1 &&
-	      tmc->I_scale_analog() == 0 &&
-	      tmc->microsteps() == defaults_microsteps[i] &&
-				tmc->intpol() == defaults_256_step_interpol[i] &&
-				tmc->mstep_reg_select() == 1 &&
-	      tmc->en_spreadCycle() == defaults_en_spreadCycle[i] &&
-	      tmc->toff() == defaults_toff[i];
+		      tmc->pdn_disable() == 1 &&
+		      tmc->I_scale_analog() == 0 &&
+					tmc->mstep_reg_select() == 1 &&
+		      tmc->toff() == defaults_toff[i];
+
+			if (!enable_i2c) {
+					conf_checked[i] = conf_checked[i] &&
+							tmc->microsteps() == defaults_microsteps[i] &&
+							tmc->intpol() == defaults_256_step_interpol[i] &&
+				      tmc->en_spreadCycle() == defaults_en_spreadCycle[i];
+			}
 
 	    Serial.print("driver ");Serial.print(i+1);Serial.print(" check control is : ");
 	    Serial.println(conf_checked[i]==1?"true":"false");
@@ -86,6 +105,38 @@ bool checkConfig() {
 		}
 
 		return true;
+}
+
+bool checkConfigAndSendDiag(bool enable_i2c) {
+	isConfigOK = checkConfig(enable_i2c);
+	Serial.print("Config is ");
+	Serial.println(isConfigOK?"OK":"on ERROR");
+	if (isConfigOK) {
+		digitalWrite(ERROR_PIN, LOW);
+	} else {
+		digitalWrite(ERROR_PIN, HIGH);
+	}
+	return isConfigOK;
+}
+
+
+//*************************************************************************************
+//		                             Standalone section
+//*************************************************************************************
+
+uint16_t getMicrostep (uint8_t mres){
+	switch(mres) {
+		case 0: return 256;
+		case 1: return 128;
+		case 2: return  64;
+		case 3: return  32;
+		case 4: return  16;
+		case 5: return   8;
+		case 6: return   4;
+		case 7: return   2;
+		case 8: return   0;
+	}
+	return 0;
 }
 
 void readData() {
@@ -229,18 +280,108 @@ void unrecognized(const char *command) {
   Serial.println("getConf, getMon, startMon, stopMon");
 }
 
-bool checkConfigAndSendDiag() {
-	isConfigOK = checkConfig();
-	Serial.print("Config is ");
-	Serial.println(isConfigOK?"OK":"on ERROR");
-	if (isConfigOK) {
-		digitalWrite(ERROR_PIN, LOW);
-	} else {
-		digitalWrite(ERROR_PIN, HIGH);
+
+//*************************************************************************************
+//		                               I2C section
+//*************************************************************************************
+void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
+
+	// sanity check on channel value
+	if (channel<0 || channel>5 || !use_tmc[channel]) return;
+
+	// Initiate the SoftwareSerial
+	TMC2208Stepper *tmc = driver[channel];
+
+	switch (command) {
+		case RESET_CONF_REG :
+				//TODO perhaps reinit the register, but not necessary during test phase
+				break;
+		case SET_MICROSTEP_REG :
+				tmc->microsteps(value);
+				break;
+		case SET_CURRENT_REG :
+				tmc->rms_current(value); 						// Set driver current
+				break;
+		case SET_INTERPOL_256_REG  :
+				tmc->intpol(value);			// enable or disable 256 microsteps interpolation
+		 		break;
+		case SET_SPREADCYCLE_EN_REG :
+				tmc->en_spreadCycle(value); // Set the spreadCycle
+				break;
+		case SET_ENABLE_REG :
+				tmc->toff(value * defaults_toff[channel]);
+				break;
+		case GET_MICROSTEP_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = tmc->microsteps();
+				break;
+		case GET_CURRENT_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = tmc->rms_current();
+        break;
+		case GET_INTERPOL_256_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = tmc->intpol();
+        break;
+		case GET_SPREADCYCLE_EN_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = tmc->en_spreadCycle();
+        break;
+		case GET_ENABLE_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = !(tmc->toff()==0); // If toff=0 the driver is disable, return false
+        break;
+		case GET_ALARM_REG :
+        i2c_channel_req = channel;
+        i2c_command_req = command;
+        i2c_value_req = tmc->DRV_STATUS() ;
+        break;
+		default : break;
 	}
-	return isConfigOK;
 }
 
+//send 24 bits : data[24..9]command[8..4]channel[3..0]
+void receiveEvent(int howMany) {
+	uint8_t buffer[3];
+	byte cursor=0;
+  while (Wire.available() && cursor<3) {      // loop through all but the last
+    buffer[cursor]= Wire.read(); 							// receive byte as a character
+    cursor++;              						        // print the character
+  }
+	uint8_t channel = buffer[2] && 0x0F;				// get the channel, ie driver to requested
+	uint8_t command = (buffer[2] && 0xF0) >> 4; // get the command, ie action to do on the driver
+	unsigned int value = (buffer[0] << 8) | buffer[1]; // extract value received int byte 0 & 1
+
+	doCommandOnTMC(channel, command, value);
+}
+
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent() {
+
+  unsigned long datagram = i2c_value_req;
+
+  // left shift 4 bit to add the command byte.
+  datagram <<= 4;
+  datagram |= i2c_command_req;
+
+  // left shift 4 bit to add driver number
+  datagram <<= 4;
+  datagram |= i2c_channel_req;
+
+  uint8_t buf[] {(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
+  Wire.write(buf, 3); // respond with message of 6 bytes
+  // as expected by master
+}
+
+//*************************************************************************************
+//		                               Arduino section
+//*************************************************************************************
 void setup() {
 
   Serial.begin(57600);
@@ -248,9 +389,6 @@ void setup() {
 	// the
 	pinMode(ERROR_PIN, OUTPUT);
 	digitalWrite(ERROR_PIN, HIGH);
-
-	//pinMode(CHECK_PIN, INPUT);
-	//lastCheckLevelSignal = digitalRead(CHECK_PIN);
 
   sCmd.addCommand("getConf", getConfig);
   sCmd.addCommand("getMon", getMonitoring);
@@ -281,14 +419,33 @@ void setup() {
 
   }
 
-  // at startup wait driver are online to setup them
-  delay(DELAY_BEFORE_STARTUP_CONF);
+	// If I2C is enable, start the I2C communication
+	if (ENABLE_I2C) {
+		// Init the i2c mode
+		Serial.println("init I2C mode !");
 
-  // setup the driver
-  applySettings();
+		// Init the I2C component
+		Wire.begin(I2C_ADDRESS);                // join i2c bus with address #8
+		Wire.onReceive(receiveEvent); 					// register event when this receive from i2c
+		Wire.onRequest(requestEvent);						// register event when this sent to i2c
 
-	// check the actual config of drivers and if wrong switch HIGH pin ERROR
-	checkConfigAndSendDiag();
+		// setup the driver
+		applySettings(ENABLE_I2C);
+
+	} else {
+		// Init the standalone mode
+		Serial.println("init standalone mode !");
+
+	  // at startup wait driver are online to setup them
+	  delay(DELAY_BEFORE_STARTUP_CONF);
+
+	  // setup the driver
+	  applySettings(ENABLE_I2C);
+
+		// check the actual config of drivers and if wrong switch HIGH pin ERROR
+		checkConfigAndSendDiag(ENABLE_I2C);
+
+	}
 
   Serial.println("Startup end !");
 
@@ -305,17 +462,20 @@ void loop() {
 		readData();
   }
 
-	if (!isConfigOK && AUTO_CONF_ON_ERROR) {
+	if (!isConfigOK && AUTO_CONF_ON_ERROR && ((time - lastTime)>DELAY_BEETWEEN_CHECK_CONF)) {
 		Serial.println("Auto restart config on error...");
-		applySettings();
-		checkConfigAndSendDiag();
+		lastTime = time;
+		applySettings(ENABLE_I2C);
+		checkConfigAndSendDiag(ENABLE_I2C);
 	}
 
 	// if pin "check" is up, check the config, and wait 1 sec before do a new step on
-	if (digitalRead(CHECK_PIN) && ((time - lastTime)>DELAY_BEETWEEN_CHECK_CONF)) {
+	if (!ENABLE_I2C && digitalRead(CHECK_PIN) && ((time - lastTime)>DELAY_BEETWEEN_CHECK_CONF)) {
 		Serial.println("Check pin is enable and it's time to check...");
 		lastTime = time;
-		checkConfigAndSendDiag();
+		checkConfigAndSendDiag(ENABLE_I2C);
 	}
+
+	delay(200); // to not stress CPU
 
 }
