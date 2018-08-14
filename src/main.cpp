@@ -62,7 +62,7 @@ void applySettings(bool enable_i2c) {
 }
 
 bool checkConfig(bool enable_i2c) {
-	  Serial.println("checkConfig");
+	  Serial.println("CheckConfig :");
 
 	  // before call driver, wait they are not busy
 	  while (DriversBusy) {}
@@ -92,7 +92,7 @@ bool checkConfig(bool enable_i2c) {
 				      tmc->en_spreadCycle() == defaults_en_spreadCycle[i];
 			}
 
-	    Serial.print("driver ");Serial.print(i+1);Serial.print(" check control is : ");
+	    Serial.print(" driver ");Serial.print(i+1);Serial.print(" check control is : ");
 	    Serial.println(conf_checked[i]==1?"true":"false");
 
 	  }
@@ -109,7 +109,7 @@ bool checkConfig(bool enable_i2c) {
 
 bool checkConfigAndSendDiag(bool enable_i2c) {
 	isConfigOK = checkConfig(enable_i2c);
-	Serial.print("Config is ");
+	Serial.print("config is ");
 	Serial.println(isConfigOK?"OK":"on ERROR");
 	if (isConfigOK) {
 		digitalWrite(ERROR_PIN, LOW);
@@ -287,7 +287,11 @@ void unrecognized(const char *command) {
 void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
 
 	// sanity check on channel value
-	if (channel<0 || channel>4 || !use_tmc[channel]) return;
+	if (channel<0 || channel>4 || !use_tmc[channel]) {
+    Serial.print("I2C error, channel requested not available : ");
+    Serial.println(channel);
+    return;
+  }
 
 	// Initiate the SoftwareSerial
 	TMC2208Stepper *tmc = driver[channel];
@@ -295,8 +299,6 @@ void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
 	switch (command) {
 		case RESET_CONF_REG :
 				//TODO perhaps reinit the register, but not necessary during test phase
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = 1;          // return 1 to say init is OK
 				break;
 		case SET_MICROSTEP_REG :
@@ -312,43 +314,35 @@ void doCommandOnTMC(uint8_t channel, uint8_t command, unsigned int value) {
 				tmc->en_spreadCycle(value); // Set the spreadCycle
 				break;
 		case SET_ENABLE_REG :
-				tmc->toff(value * defaults_toff[channel]);
+				tmc->toff(value?defaults_toff[channel]:0x00); // if value send, set default_toff, else set 0x00
 				break;
 		case GET_MICROSTEP_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = tmc->microsteps();
 				break;
 		case GET_CURRENT_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = tmc->rms_current();
         break;
 		case GET_INTERPOL_256_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = tmc->intpol();
         break;
 		case GET_SPREADCYCLE_EN_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = tmc->en_spreadCycle();
         break;
 		case GET_ENABLE_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = !(tmc->toff()==0); // If toff=0 the driver is disable, return false
         break;
 		case GET_ALARM_REG :
-        i2c_channel_req = channel;
-        i2c_command_req = command;
         i2c_value_req = tmc->DRV_STATUS() ;
         break;
 		default : break;
 	}
+
+  // Store the channel and the command request for the response
+  i2c_channel_req = channel;
+  i2c_command_req = command;
 }
 
-//send 24 bits : data[24..9]command[8..4]channel[3..0]
+//receive 24 bits : data[24..9]command[8..4]channel[3..0]
 void receiveEvent(int howMany) {
 	uint8_t buffer[3];
 	byte cursor=0;
@@ -359,6 +353,18 @@ void receiveEvent(int howMany) {
 	uint8_t channel = buffer[2] && 0x0F;				// get the channel, ie driver to requested
 	uint8_t command = (buffer[2] && 0xF0) >> 4; // get the command, ie action to do on the driver
 	unsigned int value = (buffer[0] << 8) | buffer[1]; // extract value received int byte 0 & 1
+
+  #ifdef DEBUG
+    Serial.print("I2C receive :");
+    Serial.print(buffer[0],HEX);Serial.print(buffer[1],HEX);Serial.print(buffer[2],HEX);
+    Serial.print('(');
+    Serial.print(buffer[0],BIN);Serial.print(buffer[1],BIN);Serial.print(buffer[2],BIN);
+    Serial.print(')');
+    Serial.print(" -> channel|command|value :");
+    Serial.print(channel); Serial.print('|');
+    Serial.print(command); Serial.print('|');
+    Serial.println(value);
+  #endif
 
 	doCommandOnTMC(channel, command, value);
 }
@@ -378,6 +384,14 @@ void requestEvent() {
   datagram |= i2c_channel_req;
 
   uint8_t buf[] {(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
+  #ifdef DEBUG
+    Serial.print("I2C respond channel|command|value : ");
+    Serial.print(i2c_channel_req);  Serial.print('|');
+    Serial.print(i2c_command_req);  Serial.print('|');
+    Serial.print(i2c_value_req);    Serial.print(" -> ");
+    Serial.print(datagram, HEX);    Serial.print(')');
+    Serial.print(datagram, BIN);    Serial.println(')');
+  #endif
   Wire.write(buf, 3); // respond with message of 3 bytes
   // as expected by master
 }
@@ -387,7 +401,7 @@ void requestEvent() {
 //*************************************************************************************
 void setup() {
 
-  Serial.begin(57600);
+  Serial.begin(115200);
 
 	// the
 	pinMode(ERROR_PIN, OUTPUT);
@@ -422,33 +436,31 @@ void setup() {
 
   }
 
+	Serial.print("init mode : ");
 	// If I2C is enable, start the I2C communication
 	if (ENABLE_I2C) {
 		// Init the i2c mode
-		Serial.println("init I2C mode !");
+		Serial.println("I2C");
 
 		// Init the I2C component
 		Wire.begin(I2C_ADDRESS);                // join i2c bus with address #8
 		Wire.onReceive(receiveEvent); 					// register event when this receive from i2c
 		Wire.onRequest(requestEvent);						// register event when this sent to i2c
 
-		// setup the driver
-		applySettings(ENABLE_I2C);
-
 	} else {
 		// Init the standalone mode
-		Serial.println("init standalone mode !");
+		Serial.println("Standalone");
 
 	  // at startup wait driver are online to setup them
 	  delay(DELAY_BEFORE_STARTUP_CONF);
 
-	  // setup the driver
-	  applySettings(ENABLE_I2C);
-
-		// check the actual config of drivers and if wrong switch HIGH pin ERROR
-		checkConfigAndSendDiag(ENABLE_I2C);
-
 	}
+
+  // setup the driver
+  applySettings(ENABLE_I2C);
+
+	// check the actual config of drivers and if wrong switch HIGH pin ERROR
+	checkConfigAndSendDiag(ENABLE_I2C);
 
   Serial.println("Startup end !");
 
@@ -461,7 +473,7 @@ void loop() {
   sCmd.readSerial();
 
 	// if the monitoring is started, read the drivers data
-  if (!DriversBusy && isConfigOK && startedMonitoring) { // if nothing talk with driver, we can read them
+  if (!DriversBusy && isConfigOK && startedMonitoring &&!ENABLE_I2C) { // if nothing talk with driver, we can read them
 		readData();
   }
 

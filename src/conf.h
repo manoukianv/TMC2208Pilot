@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+#define DEBUG
+
 // I2C configuration for Smoothiware Commands
 const bool  ENABLE_I2C  = true;
 const int   I2C_ADDRESS = 2208;
@@ -55,3 +57,5 @@ const bool defaults_en_spreadCycle[] = {false, false, false, true, false};
 #define ERROR_PIN    13
 
 #define CHECK_PIN    14
+//#define SDA_PIN    27 Unused but for memory (Pin A4)
+//#define SCL_PIN    28 Unused but for memory (Pin A5)
