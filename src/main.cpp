@@ -1,12 +1,45 @@
-#include "main.h"
+#include <Arduino.h>
 
+#include <SerialCommand.h>
 #include <SoftwareSerial.h>
 #include <TMC2208Stepper.h>
 #include <TMC2208Stepper_REGDEFS.h>
 #include <Wire.h>
-#include <SerialCommand.h>
+#include <tmci2c.h>
 
 #include "conf.h"
+
+const char *RELEASE      = "0.5.1";
+
+// based on the TMC2208Stepper_MACRO.h, return a flag from a read status
+#define GETSTATUS(VAR, SETTING) ((VAR&SETTING##_bm)	>>SETTING##_bp)
+
+// Local variable used in standard mode
+uint16_t min_current[5]     = {9999,9999,9999,9999,9999};
+uint16_t max_current[5]     = {0,0,0,0,0};
+uint16_t act_current[5]     = {0,0,0,0,0};
+uint32_t reg_drv_status[5]  = {0,0,0,0,0};
+uint32_t reg_ms_cur_act[5]  = {0,0,0,0,0};
+uint32_t reg_chop_conf[5]   = {0,0,0,0,0};
+bool     conf_checked[5]    = {false, false, false, false, false};
+
+// Variable used for TMC communication with Driver
+SoftwareSerial *tmc_sw[5];
+TMC2208Stepper *driver[5];
+bool DriversBusy = false;
+bool isConfigOK;
+
+// Variable used for Monitoring and serial
+SerialCommand sCmd;               // The demo SerialCommand object
+bool startedMonitoring = false;
+unsigned long lastTime = 0;       // used for timer
+
+// Variable used for i2C communication
+uint8_t i2c_channel_req;				// driver to requested
+uint8_t i2c_command_req;        // action to do on the driver
+unsigned int i2c_value_req;   // value requested int byte 0 & 1
+
+TmcI2C tmc2ic;
 
 #define RESET_CONF_REG              0
 #define SET_MICROSTEP_REG           1
@@ -350,10 +383,12 @@ void receiveEvent(int howMany) {
     buffer[cursor]= Wire.read(); 							// receive byte as a character
     cursor++;              						        // print the character
   }
-	uint8_t channel = buffer[2] && 0x0F;				// get the channel, ie driver to requested
-	uint8_t command = (buffer[2] && 0xF0) >> 4; // get the command, ie action to do on the driver
-	unsigned int value = (buffer[0] << 8) | buffer[1]; // extract value received int byte 0 & 1
 
+  uint8_t channel;
+  uint8_t command;
+  unsigned int value;
+
+  tmc2ic.decode(buffer, 3, &channel, &command, &value);
   #ifdef DEBUG
     Serial.print("I2C receive :");
     Serial.print(buffer[0],HEX);Serial.print(buffer[1],HEX);Serial.print(buffer[2],HEX);
@@ -373,26 +408,21 @@ void receiveEvent(int howMany) {
 // this function is registered as an event, see setup()
 void requestEvent() {
 
-  unsigned long datagram = i2c_value_req;
+  uint8_t buffer[3];
+  tmc2ic.encode(buffer, 3, i2c_channel_req, i2c_command_req, i2c_value_req);
 
-  // left shift 4 bit to add the command byte.
-  datagram <<= 4;
-  datagram |= i2c_command_req;
-
-  // left shift 4 bit to add driver number
-  datagram <<= 4;
-  datagram |= i2c_channel_req;
-
-  uint8_t buf[] {(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
   #ifdef DEBUG
     Serial.print("I2C respond channel|command|value : ");
     Serial.print(i2c_channel_req);  Serial.print('|');
     Serial.print(i2c_command_req);  Serial.print('|');
     Serial.print(i2c_value_req);    Serial.print(" -> ");
-    Serial.print(datagram, HEX);    Serial.print(')');
-    Serial.print(datagram, BIN);    Serial.println(')');
+    Serial.print(buffer[0],HEX);Serial.print(buffer[1],HEX);Serial.print(buffer[2],HEX);
+    Serial.print('(');
+    Serial.print(buffer[0],BIN);Serial.print(buffer[1],BIN);Serial.print(buffer[2],BIN);   
+    Serial.println(')');
   #endif
-  Wire.write(buf, 3); // respond with message of 3 bytes
+
+  Wire.write(buffer, 3); // respond with message of 3 bytes
   // as expected by master
 }
 
