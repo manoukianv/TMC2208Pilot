@@ -1,0 +1,16 @@
+##########################################
+# Switch module to tal with TMC2208Pilot##
+##########################################
+# tmc2208error switch read the 1.30 pin and "suspend" the printer 
+# if level is high and "resume" if the level is down 
+switch.tmc2208error.enable                	true                    # Enable this module
+switch.tmc2208error.input_pin             	1.30                    # Pin where TMC2208Pilot ERROR_LED is connected
+switch.tmc2208error.output_on_command     	suspend                 # Suspend command
+switch.tmc2208error.output_off_command    	resume			 		# Resume command
+
+# Switch module to ask to TMC2208Pilot to start a new checkconf
+switch.tmc2208Status.enable                     true             	# Enable this module
+switch.tmc2208Status.input_on_command           M1001            	# This switch is turned on when M1000 is sent
+switch.tmc2208Status.input_off_command          M1002            	# This switch is turned off when M1001 is sent
+switch.tmc2208Status.output_pin                 0.16             	# This pin is turned on when this switch is turned on, and vice-versa
+switch.tmc2208Status.output_type                digital		 	 	# The pin state is ON or OFF
