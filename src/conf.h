@@ -7,17 +7,17 @@ const bool          AUTO_CONF_ON_ERROR        = true;  //restart conf automatica
 
 // Define which drivers you used, see pinout to disable unused drivers
 // 5 drivers max are available
-const bool use_tmc[] = {true, true, true, true, false};
+const bool use_tmc[] = {true, true, true, true, true};
 
 // Set the default current amps, max amp is 1700mA (1.7A)
-const float defaults_amps[] = {1000, 1000, 1000, 1000, 1000};
+const float defaults_amps[] = {1000, 1000, 700, 700, 1000};
 
 // Set the default microsteps, (2, 4, 8, 16, 32, 64, 128, or 256)
-const uint16_t defaults_microsteps[]        = {64, 64, 32, 64, 64};
+const uint16_t defaults_microsteps[]        = {32, 32, 32, 32, 32};
 const bool     defaults_256_step_interpol[] = {true, true, true, true, true};
 
 // Enable the spreadCycle on driver
-const bool defaults_en_spreadCycle[] = {false, false, false, true, false};
+const bool defaults_en_spreadCycle[] = {false, false, false, false, true};
 
 // Set the default TOFF (0, driver disabled, more than 2 for StealChop, beetween 2-15 for spreadCycle)
 // https://hackaday.com/2016/09/30/3d-printering-trinamic-tmc2130-stepper-motor-drivers-shifting-the-gears/
@@ -38,7 +38,7 @@ const float defaults_toff[] = {8, 8, 8, 8, 8};
 #define TMC_4_RX_PIN 9
 #define TMC_4_TX_PIN 8
 
-#define TMC_5_RX_PIN 10
+#define TMC_5_RX_PIN 12
 #define TMC_5_TX_PIN 11
 
 #define ERROR_PIN    13
